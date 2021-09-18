@@ -2,7 +2,7 @@ from scipy.spatial import cKDTree
 from tqdm.notebook import tqdm, trange
 import xarray as xr
 import numpy as np
-import basal_melt_param.useful_functions as uf
+import multimelt.useful_functions as uf
 
 
 # find shortest distance of isf_points to line
