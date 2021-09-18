@@ -1,6 +1,6 @@
 import numpy as np
-from basal_melt_param.constants import *
-import basal_melt_param.useful_functions as uf
+from multimelt.constants import *
+import multimelt.useful_functions as uf
 import xarray as xr
 import time
 from tqdm.notebook import trange, tqdm
