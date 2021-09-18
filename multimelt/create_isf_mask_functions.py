@@ -8,9 +8,9 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from tqdm.notebook import tqdm, trange
-import basal_melt_param.plume_functions as pf
-import basal_melt_param.useful_functions as uf
-import basal_melt_param.box_functions as bf
+import multimelt.plume_functions as pf
+import multimelt.useful_functions as uf
+import multimelt.box_functions as bf
 
 def read_isfmask_info(infile):
     
