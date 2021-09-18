@@ -28,7 +28,7 @@ long_description = open(os.path.join(here, 'README.md'), encoding='utf-8').read(
 setuptools.setup(
 	
     #The project's name
-    name='basmati',
+    name='multimelt',
     
     #The project's version 
     version='0.1',
@@ -36,11 +36,11 @@ setuptools.setup(
     #The project's metadata
     author='Clara Burgard',
     author_email='clara.burgard@univ-grenoble-alpes.fr',
-    description='Ice shelf basal melt parameterisations',
+    description='Regroupment of the main existing ice shelf basal melt parameterisations',
     long_description=long_description,
     
     #The project's main homepage.
-    url='https://github.com/ClimateClara/basmati',
+    url='https://github.com/ClimateClara/multimelt',
     
     #The project's license
     license='GPL-3.0',
@@ -56,9 +56,9 @@ setuptools.setup(
     ],
       
     project_urls={
-        'Source': 'https://github.com/ClimateClara/basmati',
-        'Tracker': 'https://github.com/ClimateClara/bsamati/issues',
-    #    'Documentation': 'https://basmati.readthedocs.io',
+        'Source': 'https://github.com/ClimateClara/multimelt',
+        'Tracker': 'https://github.com/ClimateClara/multimelt/issues',
+    #    'Documentation': 'https://multimelt.readthedocs.io',
       },
     
     keywords='earth-sciences climate-modeling ice-sheet antarctica oceanography',
