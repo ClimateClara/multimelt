@@ -1,0 +1,217 @@
+! ICE SHELF NAMES                    ! REGION NAMES                         ! ICE SHELF MELT (Gt/yr) ! MELT UNCERTAINTY (Gt/yr)   ! ICE-SHELF AREA IN RIGNOT (km^2)
+name_isf(  2) = 'Weddell small isf  '; name_reg(  2) = 'Weddell            '; melt_isf(  2) =   0.0  ; err_melt_isf(  2) =   0.0  ; area_isf(  2) =      1.d-9
+name_isf(  3) = 'DrMaudLd small isf '; name_reg(  3) = 'Droning Maud Land  '; melt_isf(  3) =   0.0  ; err_melt_isf(  3) =   0.0  ; area_isf(  3) =      1.d-9
+name_isf(  4) = 'East Ant1 small isf'; name_reg(  4) = 'East 1             '; melt_isf(  4) =   0.0  ; err_melt_isf(  4) =   0.0  ; area_isf(  4) =      1.d-9
+name_isf(  5) = 'East Ant2 small isf'; name_reg(  5) = 'East 2             '; melt_isf(  5) =   0.0  ; err_melt_isf(  5) =   0.0  ; area_isf(  5) =      1.d-9
+name_isf(  6) = 'West Ross small isf'; name_reg(  6) = 'Western Ross       '; melt_isf(  6) =   0.0  ; err_melt_isf(  6) =   0.0  ; area_isf(  6) =      1.d-9
+name_isf(  7) = 'East Ross small isf'; name_reg(  7) = 'Eastern Ross       '; melt_isf(  7) =   0.0  ; err_melt_isf(  7) =   0.0  ; area_isf(  7) =      1.d-9
+name_isf(  8) = 'Amundsen small isf '; name_reg(  8) = 'Amundsen           '; melt_isf(  8) =   0.0  ; err_melt_isf(  8) =   0.0  ; area_isf(  8) =      1.d-9
+name_isf(  9) = 'Bellingsh small isf'; name_reg(  9) = 'Bellingshausen     '; melt_isf(  9) =   0.0  ; err_melt_isf(  9) =   0.0  ; area_isf(  9) =      1.d-9
+name_isf( 26) = 'Larsen B           '; name_reg( 26) = 'Weddell            '; melt_isf( 26) =  12.2  ; err_melt_isf( 26) =  14.0  ; area_isf( 26) =   6755.d0
+name_isf( 42) = 'Larsen C           '; name_reg( 42) = 'Weddell            '; melt_isf( 42) =  20.7  ; err_melt_isf( 42) =  67.0  ; area_isf( 42) =  46465.d0
+name_isf( 55) = 'Larsen D           '; name_reg( 55) = 'Weddell            '; melt_isf( 55) =   1.4  ; err_melt_isf( 55) =  14.0  ; area_isf( 55) =  22548.d0
+name_isf( 68) = 'Larsen E           '; name_reg( 68) = 'Weddell            '; melt_isf( 68) =   1.4  ; err_melt_isf( 68) =   1.0  ; area_isf( 68) =   1184.d0
+name_isf( 60) = 'Larsen F           '; name_reg( 60) = 'Weddell            '; melt_isf( 60) =   1.2  ; err_melt_isf( 60) =   0.4  ; area_isf( 60) =    828.d0
+name_isf( 27) = 'Larsen G           '; name_reg( 27) = 'Weddell            '; melt_isf( 27) =   0.3  ; err_melt_isf( 27) =   0.2  ; area_isf( 27) =    412.d0
+name_isf( 21) = 'Ronne              '; name_reg( 21) = 'Weddell            '; melt_isf( 21) = 113.5  ; err_melt_isf( 21) =  35.0  ; area_isf( 21) = 338887.d0
+name_isf( 11) = 'Filchner           '; name_reg( 11) = 'Weddell            '; melt_isf( 11) =  41.9  ; err_melt_isf( 11) =  10.0  ; area_isf( 11) = 104253.d0
+name_isf( 69) = 'Stancomb Brunt     '; name_reg( 69) = 'Dronning Maud Land '; melt_isf( 69) =   1.0  ; err_melt_isf( 69) =   7.0  ; area_isf( 69) =  36894.d0
+name_isf( 43) = 'Riiser-Larsen      '; name_reg( 43) = 'Dronning Maud Land '; melt_isf( 43) =   8.7  ; err_melt_isf( 43) =   9.0  ; area_isf( 43) =  43450.d0
+name_isf( 28) = 'Quar               '; name_reg( 28) = 'Dronning Maud Land '; melt_isf( 28) =   1.4  ; err_melt_isf( 28) =   0.5  ; area_isf( 28) =   2156.d0
+name_isf( 12) = 'Ekstrom            '; name_reg( 12) = 'Dronning Maud Land '; melt_isf( 12) =   4.3  ; err_melt_isf( 12) =   2.0  ; area_isf( 12) =   6872.d0
+name_isf( 57) = 'Atka               '; name_reg( 57) = 'Dronning Maud Land '; melt_isf( 57) =  -0.5  ; err_melt_isf( 57) =   0.4  ; area_isf( 57) =   1969.d0
+name_isf( 70) = 'Jelbart            '; name_reg( 70) = 'Dronning Maud Land '; melt_isf( 70) =  -1.0  ; err_melt_isf( 70) =   3.0  ; area_isf( 70) =  10844.d0
+name_isf( 44) = 'Fimbul             '; name_reg( 44) = 'Dronning Maud Land '; melt_isf( 44) =  23.5  ; err_melt_isf( 44) =   9.0  ; area_isf( 44) =  40843.d0
+name_isf( 29) = 'Vigrid             '; name_reg( 29) = 'Dronning Maud Land '; melt_isf( 29) =   3.2  ; err_melt_isf( 29) =   0.7  ; area_isf( 29) =   2089.d0
+name_isf( 13) = 'Nivl               '; name_reg( 13) = 'Dronning Maud Land '; melt_isf( 13) =   3.9  ; err_melt_isf( 13) =   2.0  ; area_isf( 13) =   7285.d0
+name_isf( 58) = 'Lazarev            '; name_reg( 58) = 'Dronning Maud Land '; melt_isf( 58) =   6.3  ; err_melt_isf( 58) =   2.0  ; area_isf( 58) =   8519.d0
+name_isf( 71) = 'Borchgrevink       '; name_reg( 71) = 'Dronning Maud Land '; melt_isf( 71) =   7.5  ; err_melt_isf( 71) =   6.0  ; area_isf( 71) =  21580.d0
+name_isf( 45) = 'Roi Baudouin        '; name_reg( 45) = 'Dronning Maud Land '; melt_isf( 45) =  14.1  ; err_melt_isf( 45) =  12.0  ; area_isf( 45) =  32952.d0
+name_isf( 30) = 'Prince Harald      '; name_reg( 30) = 'Dronning Maud Land '; melt_isf( 30) =  -2.0  ; err_melt_isf( 30) =   3.0  ; area_isf( 30) =   5392.d0
+name_isf( 14) = 'Shirase            '; name_reg( 14) = 'Dronning Maud Land '; melt_isf( 14) =   5.7  ; err_melt_isf( 14) =   1.0  ; area_isf( 14) =    821.d0
+name_isf( 59) = 'Rayner/Thyer       '; name_reg( 59) = 'East 1             '; melt_isf( 59) =   6.7  ; err_melt_isf( 59) =   1.0  ; area_isf( 59) =    641.d0
+name_isf( 72) = 'Edward VIII        '; name_reg( 72) = 'East 1             '; melt_isf( 72) =   4.2  ; err_melt_isf( 72) =   0.8  ; area_isf( 72) =    411.d0
+name_isf( 46) = 'Wilma/Robert/Downer'; name_reg( 46) = 'East 1             '; melt_isf( 46) =  10.0  ; err_melt_isf( 46) =   0.6  ; area_isf( 46) =    858.d0
+name_isf( 31) = 'Amery              '; name_reg( 31) = 'East 1             '; melt_isf( 31) =  35.5  ; err_melt_isf( 31) =  23.0  ; area_isf( 31) =  60654.d0
+name_isf( 15) = 'Publications       '; name_reg( 15) = 'East 1             '; melt_isf( 15) =   1.5  ; err_melt_isf( 15) =   2.0  ; area_isf( 15) =   1551.d0
+name_isf( 61) = 'West               '; name_reg( 61) = 'East 1             '; melt_isf( 61) =  27.2  ; err_melt_isf( 61) =  10.0  ; area_isf( 61) =  15666.d0
+name_isf( 73) = 'Shackleton         '; name_reg( 73) = 'East 2             '; melt_isf( 73) =  72.6  ; err_melt_isf( 73) =  15.0  ; area_isf( 73) =  26080.d0
+name_isf( 47) = 'Tracy Tremenchus   '; name_reg( 47) = 'East 2             '; melt_isf( 47) =   3.0  ; err_melt_isf( 47) =   2.0  ; area_isf( 47) =   2845.d0
+name_isf( 32) = 'Conger/Glenzer     '; name_reg( 32) = 'East 2             '; melt_isf( 32) =   3.6  ; err_melt_isf( 32) =   1.0  ; area_isf( 32) =   1547.d0
+name_isf( 16) = 'Vincennes Bay      '; name_reg( 16) = 'East 2             '; melt_isf( 16) =   5.0  ; err_melt_isf( 16) =   2.0  ; area_isf( 16) =    935.d0
+name_isf( 48) = 'Totten             '; name_reg( 48) = 'East 2             '; melt_isf( 48) =  63.2  ; err_melt_isf( 48) =   4.0  ; area_isf( 48) =   6032.d0
+name_isf( 33) = 'Moscow Univ.       '; name_reg( 33) = 'East 2             '; melt_isf( 33) =  27.4  ; err_melt_isf( 33) =   4.0  ; area_isf( 33) =   5798.d0
+name_isf( 17) = 'Holmes             '; name_reg( 17) = 'East 2             '; melt_isf( 17) =   6.7  ; err_melt_isf( 17) =   4.0  ; area_isf( 17) =   1921.d0
+name_isf( 62) = 'Dibble             '; name_reg( 62) = 'East 2             '; melt_isf( 62) =   8.1  ; err_melt_isf( 62) =   1.0  ; area_isf( 62) =   1482.d0
+name_isf( 49) = 'Mertz              '; name_reg( 49) = 'East 2             '; melt_isf( 49) =   7.9  ; err_melt_isf( 49) =   3.0  ; area_isf( 49) =   5522.d0
+name_isf( 34) = 'Ninnis             '; name_reg( 34) = 'East 2             '; melt_isf( 34) =   2.2  ; err_melt_isf( 34) =   3.0  ; area_isf( 34) =   1899.d0
+name_isf( 18) = 'Cook               '; name_reg( 18) = 'East 2             '; melt_isf( 18) =   4.6  ; err_melt_isf( 18) =   5.0  ; area_isf( 18) =   3462.d0
+name_isf( 63) = 'Rennick            '; name_reg( 63) = 'East 2             '; melt_isf( 63) =   7.0  ; err_melt_isf( 63) =   1.0  ; area_isf( 63) =   3273.d0
+name_isf( 74) = 'Lillie             '; name_reg( 74) = 'East 2             '; melt_isf( 74) =   3.4  ; err_melt_isf( 74) =   0.3  ; area_isf( 74) =    770.d0
+name_isf( 50) = 'Mariner            '; name_reg( 50) = 'Western Ross       '; melt_isf( 50) =   2.4  ; err_melt_isf( 50) =   0.6  ; area_isf( 50) =   2705.d0
+name_isf( 35) = 'Aviator            '; name_reg( 35) = 'Western Ross       '; melt_isf( 35) =   1.4  ; err_melt_isf( 35) =   0.2  ; area_isf( 35) =    785.d0
+name_isf( 19) = 'Nansen             '; name_reg( 19) = 'Western Ross       '; melt_isf( 19) =   1.1  ; err_melt_isf( 19) =   0.6  ; area_isf( 19) =   1985.d0
+name_isf( 64) = 'Drygalski          '; name_reg( 64) = 'Western Ross       '; melt_isf( 64) =   7.6  ; err_melt_isf( 64) =   1.0  ; area_isf( 64) =   2338.d0
+name_isf( 10) = 'Ross               '; name_reg( 10) = 'Ross               '; melt_isf( 10) =  47.7  ; err_melt_isf( 10) =  35.0  ; area_isf( 10) = 500809.d0  ! sum of absolute uncertainties for East & West 
+name_isf( 36) = 'Withrow            '; name_reg( 36) = 'Eastern Ross       '; melt_isf( 36) =   0.3  ; err_melt_isf( 36) =   0.4  ; area_isf( 36) =    632.d0
+name_isf( 20) = 'Swinburne          '; name_reg( 20) = 'Eastern Ross       '; melt_isf( 20) =   3.8  ; err_melt_isf( 20) =   0.5  ; area_isf( 20) =    900.d0
+name_isf( 65) = 'Sulzberger         '; name_reg( 65) = 'Eastern Ross       '; melt_isf( 65) =  18.2  ; err_melt_isf( 65) =   3.0  ; area_isf( 65) =  12333.d0
+name_isf( 51) = 'Nickerson          '; name_reg( 51) = 'Eastern Ross       '; melt_isf( 51) =   4.2  ; err_melt_isf( 51) =   2.0  ; area_isf( 51) =   6495.d0
+name_isf( 37) = 'Land               '; name_reg( 37) = 'Eastern Ross       '; melt_isf( 37) =   3.8  ; err_melt_isf( 37) =   1.0  ; area_isf( 37) =    640.d0
+name_isf( 22) = 'Getz               '; name_reg( 22) = 'Amundsen           '; melt_isf( 22) = 144.9  ; err_melt_isf( 22) =  14.0  ; area_isf( 22) =  34018.d0
+name_isf( 52) = 'Dotson             '; name_reg( 52) = 'Amundsen           '; melt_isf( 52) =  45.2  ; err_melt_isf( 52) =   4.0  ; area_isf( 52) =   5803.d0
+name_isf( 38) = 'Crosson            '; name_reg( 38) = 'Amundsen           '; melt_isf( 38) =  38.5  ; err_melt_isf( 38) =   4.0  ; area_isf( 38) =   3229.d0
+name_isf( 23) = 'Thwaites           '; name_reg( 23) = 'Amundsen           '; melt_isf( 23) =  97.5  ; err_melt_isf( 23) =   7.0  ; area_isf( 23) =   5499.d0
+name_isf( 66) = 'Pine Island        '; name_reg( 66) = 'Amundsen           '; melt_isf( 66) = 101.2  ; err_melt_isf( 66) =   8.0  ; area_isf( 66) =   6249.d0
+name_isf( 53) = 'Cosgrove           '; name_reg( 53) = 'Amundsen           '; melt_isf( 53) =   8.5  ; err_melt_isf( 53) =   2.0  ; area_isf( 53) =   3033.d0
+name_isf( 39) = 'Abbot              '; name_reg( 39) = 'Bellingshausen     '; melt_isf( 39) =  51.8  ; err_melt_isf( 39) =  19.0  ; area_isf( 39) =  29688.d0
+name_isf( 24) = 'Venable            '; name_reg( 24) = 'Bellingshausen     '; melt_isf( 24) =  19.4  ; err_melt_isf( 24) =   2.0  ; area_isf( 24) =   3194.d0
+name_isf( 67) = 'Ferrigno           '; name_reg( 67) = 'Bellingshausen     '; melt_isf( 67) =   5.1  ; err_melt_isf( 67) =   2.0  ; area_isf( 67) =    117.d0
+name_isf( 75) = 'Wilkins            '; name_reg( 75) = 'Bellingshausen     '; melt_isf( 75) =  18.4  ; err_melt_isf( 75) =  17.0  ; area_isf( 75) =  12866.d0
+name_isf( 54) = 'Bach               '; name_reg( 54) = 'Bellingshausen     '; melt_isf( 54) =  10.4  ; err_melt_isf( 54) =   1.0  ; area_isf( 54) =   4579.d0
+name_isf( 40) = 'Stange             '; name_reg( 40) = 'Bellingshausen     '; melt_isf( 40) =  28.0  ; err_melt_isf( 40) =   6.0  ; area_isf( 40) =   8027.d0
+name_isf( 25) = 'George VI          '; name_reg( 25) = 'Bellingshausen     '; melt_isf( 25) =  89.0  ; err_melt_isf( 25) =  17.0  ; area_isf( 25) =  23434.d0
+name_isf( 41) = 'Wordie             '; name_reg( 41) = 'Bellingshausen     '; melt_isf( 41) =   6.5  ; err_melt_isf( 41) =   3.0  ; area_isf( 41) =    277.d0
+!
+name_isf( 77) = 'Morgan Inlet       '; name_reg( 77) = 'Bellingshausen     '; melt_isf( 77) =   0.0  ; err_melt_isf( 77) =   0.0  ; ! Abbot-6 / Thurston Island
+name_isf( 78) = 'Henry-Wagoner Inl. '; name_reg( 78) = 'Bellingshausen     '; melt_isf( 78) =   0.0  ; err_melt_isf( 78) =   0.0  ; ! Abbot-1 / Thurston Island
+!name_isf( 79) = '                   '; name_reg( 79) = '                   '; melt_isf( 79) =   0.0  ; err_melt_isf( 79) =   0.0  ;
+!name_isf( 80) = '                   '; name_reg( 80) = '                   '; melt_isf( 80) =   0.0  ; err_melt_isf( 80) =   0.0  ;
+name_isf( 81) = 'Armour Inlet       '; name_reg( 81) = 'Amundsen           '; melt_isf( 81) =   0.0  ; err_melt_isf( 81) =   0.0  ; ! Getz-1 / Siple Island
+name_isf( 82) = 'Philbin Inlet      '; name_reg( 82) = 'Amundsen           '; melt_isf( 82) =   0.0  ; err_melt_isf( 82) =   0.0  ;
+name_isf( 83) = 'Harmon Bay         '; name_reg( 83) = 'Amundsen           '; melt_isf( 83) =   0.0  ; err_melt_isf( 83) =   0.0  ;
+name_isf( 84) = 'Hummer Point       '; name_reg( 84) = 'Amundsen           '; melt_isf( 84) =   0.0  ; err_melt_isf( 84) =   0.0  ;
+name_isf( 85) = 'Walgreen Coast 1   '; name_reg( 85) = 'Amundsen           '; melt_isf( 85) =   0.0  ; err_melt_isf( 85) =   0.0  ; ! Walgreen Coast 2 missing
+name_isf( 86) = 'Cadwalader Inlet   '; name_reg( 86) = 'Bellingshausen     '; melt_isf( 86) =   0.0  ; err_melt_isf( 86) =   0.0  ; ! Abbot-5 / Thurston Island
+name_isf( 87) = 'Koether Inlet      '; name_reg( 87) = 'Bellingshausen     '; melt_isf( 87) =   0.0  ; err_melt_isf( 87) =   0.0  ; ! Abbot-4 / Thurston Island
+name_isf( 88) = 'Murphy Inlet       '; name_reg( 88) = 'Bellingshausen     '; melt_isf( 88) =   0.0  ; err_melt_isf( 88) =   0.0  ; ! Abbot-3 / Thurston Island
+name_isf( 89) = 'Peale-Potaka Inlets'; name_reg( 89) = 'Bellingshausen     '; melt_isf( 89) =   0.0  ; err_melt_isf( 89) =   0.0  ; ! Abbot-2 / Thurston Island
+name_isf( 90) = 'Fox                '; name_reg( 90) = 'Bellingshausen     '; melt_isf( 90) =   0.0  ; err_melt_isf( 90) =   0.0  ;
+name_isf( 91) = 'Alison 2           '; name_reg( 91) = 'Bellingshausen     '; melt_isf( 91) =   0.0  ; err_melt_isf( 91) =   0.0  ; ! Only one Alison in Jeremy's data
+name_isf( 92) = 'Alison 1           '; name_reg( 92) = 'Bellingshausen     '; melt_isf( 92) =   0.0  ; err_melt_isf( 92) =   0.0  ;
+name_isf( 93) = 'Thomson            '; name_reg( 93) = 'Bellingshausen     '; melt_isf( 93) =   0.0  ; err_melt_isf( 93) =   0.0  ;
+name_isf( 94) = 'Smyley Island      '; name_reg( 94) = 'Bellingshausen     '; melt_isf( 94) =   0.0  ; err_melt_isf( 94) =   0.0  ; ! ** new name
+name_isf( 95) = 'Spaatz Island 1    '; name_reg( 95) = 'Bellingshausen     '; melt_isf( 95) =   0.0  ; err_melt_isf( 95) =   0.0  ; ! ** new name
+name_isf( 96) = 'Spaatz Island 2    '; name_reg( 96) = 'Bellingshausen     '; melt_isf( 96) =   0.0  ; err_melt_isf( 96) =   0.0  ; ! ** new name
+name_isf( 97) = 'Britten            '; name_reg( 97) = 'Bellingshausen     '; melt_isf( 97) =   0.0  ; err_melt_isf( 97) =   0.0  ;
+name_isf( 98) = 'Verdi              '; name_reg( 98) = 'Bellingshausen     '; melt_isf( 98) =   0.0  ; err_melt_isf( 98) =   0.0  ;
+name_isf( 99) = 'Brahms             '; name_reg( 99) = 'Bellingshausen     '; melt_isf( 99) =   0.0  ; err_melt_isf( 99) =   0.0  ;
+name_isf(100) = 'Mendelssohn        '; name_reg(100) = 'Bellingshausen     '; melt_isf(100) =   0.0  ; err_melt_isf(100) =   0.0  ;
+name_isf(101) = 'Latady Island 1    '; name_reg(101) = 'Bellingshausen     '; melt_isf(101) =   0.0  ; err_melt_isf(101) =   0.0  ; ! ** new name
+name_isf(102) = 'Latady Island 2    '; name_reg(102) = 'Bellingshausen     '; melt_isf(102) =   0.0  ; err_melt_isf(102) =   0.0  ; ! ** new name
+name_isf(103) = 'Rothschild Island  '; name_reg(103) = 'Bellingshausen     '; melt_isf(103) =   0.0  ; err_melt_isf(103) =   0.0  ; ! ** new name
+name_isf(104) = 'Muller             '; name_reg(104) = 'Bellingshausen     '; melt_isf(104) =   0.0  ; err_melt_isf(104) =   0.0  ; ! Collapsed in 2008
+name_isf(105) = 'Jones              '; name_reg(105) = 'Bellingshausen     '; melt_isf(105) =   0.0  ; err_melt_isf(105) =   0.0  ; ! ** new name
+name_isf(106) = 'Perutz             '; name_reg(106) = 'Bellingshausen     '; melt_isf(106) =   0.0  ; err_melt_isf(106) =   0.0  ; ! ** new name
+name_isf(107) = 'Larsen A           '; name_reg(107) = 'Weddell            '; melt_isf(107) =   0.0  ; err_melt_isf(107) =   0.0  ;
+name_isf(108) = 'LA Hektoria Headl. '; name_reg(108) = 'Weddell            '; melt_isf(108) =   0.0  ; err_melt_isf(108) =   0.0  ; ! ** Larsen A - Hektoria Headland
+name_isf(109) = 'LA Hektoria Gr. Ev.'; name_reg(109) = 'Weddell            '; melt_isf(109) =   0.0  ; err_melt_isf(109) =   0.0  ; ! ** Larsen A - Hektoria Green Evans
+name_isf(110) = 'LA Jorum           '; name_reg(110) = 'Weddell            '; melt_isf(110) =   0.0  ; err_melt_isf(110) =   0.0  ; ! ** Larsen A - Jorum
+name_isf(111) = 'LA Crane           '; name_reg(111) = 'Weddell            '; melt_isf(111) =   0.0  ; err_melt_isf(111) =   0.0  ; ! ** Larsen A - Crane
+name_isf(112) = 'LA Mapple          '; name_reg(112) = 'Weddell            '; melt_isf(112) =   0.0  ; err_melt_isf(112) =   0.0  ; ! ** Larsen A - Mapple
+name_isf(113) = 'LA Melville        '; name_reg(113) = 'Weddell            '; melt_isf(113) =   0.0  ; err_melt_isf(113) =   0.0  ; ! ** Larsen A - Melville
+name_isf(114) = 'LA Pequod          '; name_reg(114) = 'Weddell            '; melt_isf(114) =   0.0  ; err_melt_isf(114) =   0.0  ; ! ** Larsen A - Pequod
+name_isf(115) = 'Howkins            '; name_reg(115) = 'Weddell            '; melt_isf(115) =   0.0  ; err_melt_isf(115) =   0.0  ; ! ** new name (Howkins inlet)
+name_isf(116) = '                   '; name_reg(116) = '                   '; melt_isf(116) =   0.0  ; err_melt_isf(116) =   0.0  ;
+name_isf(117) = 'Filchner/Luitpold  '; name_reg(117) = 'Weddell            '; melt_isf(117) =   0.0  ; err_melt_isf(117) =   0.0  ; ! ** new name
+name_isf(118) = 'Schweitzer         '; name_reg(118) = 'Weddell            '; melt_isf(118) =   0.0  ; err_melt_isf(118) =   0.0  ; ! ** new name
+name_isf(119) = 'Hayes              '; name_reg(119) = 'Weddell            '; melt_isf(119) =   0.0  ; err_melt_isf(119) =   0.0  ;
+name_isf(120) = 'Dawson-Lambton     '; name_reg(120) = 'Weddell            '; melt_isf(120) =   0.0  ; err_melt_isf(120) =   0.0  ;
+name_isf(121) = 'Skallen-Telen      '; name_reg(121) = 'Droning Maud Land  '; melt_isf(121) =   0.0  ; err_melt_isf(121) =   0.0  ;
+name_isf(122) = 'Oku-Iwa            '; name_reg(122) = 'Droning Maud Land  '; melt_isf(122) =   0.0  ; err_melt_isf(122) =   0.0  ; ! ** new name
+name_isf(123) = 'Kasumi             '; name_reg(123) = 'Droning Maud Land  '; melt_isf(123) =   0.0  ; err_melt_isf(123) =   0.0  ; ! ** new name
+name_isf(124) = 'Shinnan            '; name_reg(124) = 'Droning Maud Land  '; melt_isf(124) =   0.0  ; err_melt_isf(124) =   0.0  ; ! ** new name (Shinnan or Sinnan)
+name_isf(125) = 'Boree              '; name_reg(125) = 'East 1             '; melt_isf(125) =   0.0  ; err_melt_isf(125) =   0.0  ; ! ** new name (no name, closest=Boree Islands
+name_isf(126) = 'Freeth Bay         '; name_reg(126) = 'East 1             '; melt_isf(126) =   0.0  ; err_melt_isf(126) =   0.0  ; ! ** Freeth Bay
+name_isf(127) = 'Hays               '; name_reg(127) = 'East 1             '; melt_isf(127) =   0.0  ; err_melt_isf(127) =   0.0  ;
+name_isf(128) = 'Hannan             '; name_reg(128) = 'East 1             '; melt_isf(128) =   0.0  ; err_melt_isf(128) =   0.0  ;
+name_isf(129) = 'Zubchatyy          '; name_reg(129) = 'East 1             '; melt_isf(129) =   0.0  ; err_melt_isf(129) =   0.0  ;
+name_isf(130) = 'Porter             '; name_reg(130) = 'East 1             '; melt_isf(130) =   0.0  ; err_melt_isf(130) =   0.0  ;
+name_isf(131) = 'Myers              '; name_reg(131) = 'East 1             '; melt_isf(131) =   0.0  ; err_melt_isf(131) =   0.0  ;
+name_isf(132) = 'Magnet Bay         '; name_reg(132) = 'East 1             '; melt_isf(132) =   0.0  ; err_melt_isf(132) =   0.0  ;
+name_isf(133) = 'Hoseason           '; name_reg(133) = 'East 1             '; melt_isf(133) =   0.0  ; err_melt_isf(133) =   0.0  ;
+name_isf(134) = 'Cirque Fjord       '; name_reg(134) = 'East 1             '; melt_isf(134) =   0.0  ; err_melt_isf(134) =   0.0  ;
+name_isf(135) = 'Mulebreen          '; name_reg(135) = 'East 1             '; melt_isf(135) =   0.0  ; err_melt_isf(135) =   0.0  ;
+name_isf(136) = 'Oom Bay            '; name_reg(136) = 'East 1             '; melt_isf(136) =   0.0  ; err_melt_isf(136) =   0.0  ;
+name_isf(137) = 'Utsikkar           '; name_reg(137) = 'East 1             '; melt_isf(137) =   0.0  ; err_melt_isf(137) =   0.0  ;
+name_isf(138) = 'Dalk               '; name_reg(138) = 'East 1             '; melt_isf(138) =   0.0  ; err_melt_isf(138) =   0.0  ;
+name_isf(139) = 'Flatnes            '; name_reg(139) = 'East 1             '; melt_isf(139) =   0.0  ; err_melt_isf(139) =   0.0  ;
+name_isf(140) = 'Hovde              '; name_reg(140) = 'East 1             '; melt_isf(140) =   0.0  ; err_melt_isf(140) =   0.0  ;
+name_isf(141) = 'Ranvik             '; name_reg(141) = 'East 1             '; melt_isf(141) =   0.0  ; err_melt_isf(141) =   0.0  ;
+name_isf(142) = 'Chaos              '; name_reg(142) = 'East 1             '; melt_isf(142) =   0.0  ; err_melt_isf(142) =   0.0  ;
+name_isf(143) = 'Sorsdal            '; name_reg(143) = 'East 1             '; melt_isf(143) =   0.0  ; err_melt_isf(143) =   0.0  ;
+name_isf(144) = 'Posadowski Bay     '; name_reg(144) = 'East 2             '; melt_isf(144) =   0.0  ; err_melt_isf(144) =   0.0  ;
+name_isf(145) = 'Helen              '; name_reg(145) = 'East 2             '; melt_isf(145) =   0.0  ; err_melt_isf(145) =   0.0  ;
+name_isf(146) = 'DuBeau             '; name_reg(146) = 'East 2             '; melt_isf(146) =   0.0  ; err_melt_isf(146) =   0.0  ;
+name_isf(147) = 'Snedeker           '; name_reg(147) = 'East 2             '; melt_isf(147) =   0.0  ; err_melt_isf(147) =   0.0  ;
+name_isf(148) = 'Underwood          '; name_reg(148) = 'East 2             '; melt_isf(148) =   0.0  ; err_melt_isf(148) =   0.0  ;
+name_isf(149) = 'Brooks Point       '; name_reg(149) = 'East 2             '; melt_isf(149) =   0.0  ; err_melt_isf(149) =   0.0  ; ! in Vincennes Bay
+name_isf( 79) = 'Bond               '; name_reg( 79) = 'East 2             '; melt_isf( 79) =   0.0  ; err_melt_isf( 79) =   0.0  ; ! in Vincennes Bay
+name_isf( 80) = 'Hatch Islands      '; name_reg( 80) = 'East 2             '; melt_isf( 80) =   0.0  ; err_melt_isf( 80) =   0.0  ; ! in Vincennes Bay
+name_isf(150) = 'Voyekov            '; name_reg(150) = 'East 2             '; melt_isf(150) =   0.0  ; err_melt_isf(150) =   0.0  ;
+name_isf(151) = 'Cape Goodenough    '; name_reg(151) = 'East 2             '; melt_isf(151) =   0.0  ; err_melt_isf(151) =   0.0  ;
+name_isf(152) = 'Cape Spieden       '; name_reg(152) = 'East 2             '; melt_isf(152) =   0.0  ; err_melt_isf(152) =   0.0  ;
+name_isf(153) = 'Frost 1            '; name_reg(153) = 'East 2             '; melt_isf(153) =   0.0  ; err_melt_isf(153) =   0.0  ;
+name_isf(154) = 'Frost 2            '; name_reg(154) = 'East 2             '; melt_isf(154) =   0.0  ; err_melt_isf(154) =   0.0  ;
+name_isf(155) = 'Frost 3            '; name_reg(155) = 'East 2             '; melt_isf(155) =   0.0  ; err_melt_isf(155) =   0.0  ;
+name_isf(156) = 'Sandford           '; name_reg(156) = 'East 2             '; melt_isf(156) =   0.0  ; err_melt_isf(156) =   0.0  ;
+name_isf(157) = 'Morse-May          '; name_reg(157) = 'East 2             '; melt_isf(157) =   0.0  ; err_melt_isf(157) =   0.0  ;
+name_isf(158) = '                   '; name_reg(158) = 'East 2             '; melt_isf(158) =   0.0  ; err_melt_isf(158) =   0.0  ;
+name_isf(159) = 'Pourquoi Pas       '; name_reg(159) = 'East 2             '; melt_isf(159) =   0.0  ; err_melt_isf(159) =   0.0  ;
+name_isf(160) = 'Commandant Charcot '; name_reg(160) = 'East 2             '; melt_isf(160) =   0.0  ; err_melt_isf(160) =   0.0  ;
+name_isf(161) = 'Marret             '; name_reg(161) = 'East 2             '; melt_isf(161) =   0.0  ; err_melt_isf(161) =   0.0  ;
+name_isf(162) = 'Francais           '; name_reg(162) = 'East 2             '; melt_isf(162) =   0.0  ; err_melt_isf(162) =   0.0  ;
+name_isf(163) = 'Barre              '; name_reg(163) = 'East 2             '; melt_isf(163) =   0.0  ; err_melt_isf(163) =   0.0  ;
+name_isf(164) = 'Liotard            '; name_reg(164) = 'East 2             '; melt_isf(164) =   0.0  ; err_melt_isf(164) =   0.0  ;
+name_isf(165) = 'Astrolabe          '; name_reg(165) = 'East 2             '; melt_isf(165) =   0.0  ; err_melt_isf(165) =   0.0  ;
+name_isf(166) = 'Zelee              '; name_reg(166) = 'East 2             '; melt_isf(166) =   0.0  ; err_melt_isf(166) =   0.0  ;
+name_isf(167) = 'Watt Bay           '; name_reg(167) = 'East 2             '; melt_isf(167) =   0.0  ; err_melt_isf(167) =   0.0  ;
+name_isf(168) = 'Fisher Bay         '; name_reg(168) = 'East 2             '; melt_isf(168) =   0.0  ; err_melt_isf(168) =   0.0  ;
+name_isf(169) = 'Murphy Bay         '; name_reg(169) = 'East 2             '; melt_isf(169) =   0.0  ; err_melt_isf(169) =   0.0  ;
+name_isf(170) = 'Doolette Bay       '; name_reg(170) = 'East 2             '; melt_isf(170) =   0.0  ; err_melt_isf(170) =   0.0  ;
+name_isf(171) = 'Horn Bluff         '; name_reg(171) = 'East 2             '; melt_isf(171) =   0.0  ; err_melt_isf(171) =   0.0  ;
+name_isf(172) = 'Deakin             '; name_reg(172) = 'East 2             '; melt_isf(172) =   0.0  ; err_melt_isf(172) =   0.0  ;
+name_isf(173) = 'Slava              '; name_reg(173) = 'East 2             '; melt_isf(173) =   0.0  ; err_melt_isf(173) =   0.0  ;
+name_isf(174) = 'Andreyev           '; name_reg(174) = 'East 2             '; melt_isf(174) =   0.0  ; err_melt_isf(174) =   0.0  ;
+name_isf(175) = 'Lauritzen          '; name_reg(175) = 'East 2             '; melt_isf(175) =   0.0  ; err_melt_isf(175) =   0.0  ;
+name_isf(176) = 'Drury              '; name_reg(176) = 'East 2             '; melt_isf(176) =   0.0  ; err_melt_isf(176) =   0.0  ;
+name_isf(177) = 'Matusevitch        '; name_reg(177) = 'East 2             '; melt_isf(177) =   0.0  ; err_melt_isf(177) =   0.0  ;
+name_isf(178) = 'McLeod-Paternostro '; name_reg(178) = 'East 2             '; melt_isf(178) =   0.0  ; err_melt_isf(178) =   0.0  ;
+name_isf(179) = 'Noll               '; name_reg(179) = 'East 2             '; melt_isf(179) =   0.0  ; err_melt_isf(179) =   0.0  ;
+name_isf(180) = 'Gillet             '; name_reg(180) = 'East 2             '; melt_isf(180) =   0.0  ; err_melt_isf(180) =   0.0  ;
+name_isf(181) = 'Suvorov            '; name_reg(181) = 'East 2             '; melt_isf(181) =   0.0  ; err_melt_isf(181) =   0.0  ;
+name_isf(182) = 'Gannutz            '; name_reg(182) = 'East 2             '; melt_isf(182) =   0.0  ; err_melt_isf(182) =   0.0  ;
+name_isf(183) = 'Barber             '; name_reg(183) = 'East 2             '; melt_isf(183) =   0.0  ; err_melt_isf(183) =   0.0  ;
+name_isf(184) = 'Chugunov           '; name_reg(184) = 'East 2             '; melt_isf(184) =   0.0  ; err_melt_isf(184) =   0.0  ;
+name_isf(185) = 'Kirkby             '; name_reg(185) = 'East 2             '; melt_isf(185) =   0.0  ; err_melt_isf(185) =   0.0  ;
+name_isf(186) = 'Smith Inlet        '; name_reg(186) = 'East 2             '; melt_isf(186) =   0.0  ; err_melt_isf(186) =   0.0  ;
+name_isf(187) = 'Dennistoun         '; name_reg(187) = 'East 2             '; melt_isf(187) =   0.0  ; err_melt_isf(187) =   0.0  ;
+name_isf(188) = 'Cape McCormick     '; name_reg(188) = 'East 2             '; melt_isf(188) =   0.0  ; err_melt_isf(188) =   0.0  ;
+name_isf(189) = 'Moubray            '; name_reg(189) = 'Western Ross       '; melt_isf(189) =   0.0  ; err_melt_isf(189) =   0.0  ;
+name_isf(190) = 'Quatermain Point   '; name_reg(190) = 'Western Ross       '; melt_isf(190) =   0.0  ; err_melt_isf(190) =   0.0  ;
+name_isf(191) = 'Ironside           '; name_reg(191) = 'Western Ross       '; melt_isf(191) =   0.0  ; err_melt_isf(191) =   0.0  ;
+name_isf(192) = 'Manhaul-Arneb      '; name_reg(192) = 'Western Ross       '; melt_isf(192) =   0.0  ; err_melt_isf(192) =   0.0  ;
+name_isf(193) = 'Tucker             '; name_reg(193) = 'Western Ross       '; melt_isf(193) =   0.0  ; err_melt_isf(193) =   0.0  ;
+name_isf(194) = 'Mandible Cirque    '; name_reg(194) = 'Western Ross       '; melt_isf(194) =   0.0  ; err_melt_isf(194) =   0.0  ;
+name_isf(195) = 'Suter              '; name_reg(195) = 'Western Ross       '; melt_isf(195) =   0.0  ; err_melt_isf(195) =   0.0  ;
+name_isf(196) = 'Wylde              '; name_reg(196) = 'Western Ross       '; melt_isf(196) =   0.0  ; err_melt_isf(196) =   0.0  ;
+name_isf(197) = 'Fitzgerald         '; name_reg(197) = 'Western Ross       '; melt_isf(197) =   0.0  ; err_melt_isf(197) =   0.0  ;
+name_isf(198) = 'Falkner            '; name_reg(198) = 'Western Ross       '; melt_isf(198) =   0.0  ; err_melt_isf(198) =   0.0  ;
+name_isf(199) = 'Parker             '; name_reg(199) = 'Western Ross       '; melt_isf(199) =   0.0  ; err_melt_isf(199) =   0.0  ;
+name_isf(200) = 'Tinker             '; name_reg(200) = 'Western Ross       '; melt_isf(200) =   0.0  ; err_melt_isf(200) =   0.0  ;
+name_isf(201) = 'Cape Washington    '; name_reg(201) = 'Western Ross       '; melt_isf(201) =   0.0  ; err_melt_isf(201) =   0.0  ;
+name_isf(202) = 'Campbell           '; name_reg(202) = 'Western Ross       '; melt_isf(202) =   0.0  ; err_melt_isf(202) =   0.0  ;
+name_isf(203) = 'Geikie Inlet       '; name_reg(203) = 'Western Ross       '; melt_isf(203) =   0.0  ; err_melt_isf(203) =   0.0  ;
+name_isf(204) = 'Cheetham           '; name_reg(204) = 'Western Ross       '; melt_isf(204) =   0.0  ; err_melt_isf(204) =   0.0  ;
+name_isf(205) = 'Harbord            '; name_reg(205) = 'Western Ross       '; melt_isf(205) =   0.0  ; err_melt_isf(205) =   0.0  ;
+name_isf(206) = 'Marin              '; name_reg(206) = 'Western Ross       '; melt_isf(206) =   0.0  ; err_melt_isf(206) =   0.0  ;
+name_isf(207) = '                   '; name_reg(207) = '                   '; melt_isf(207) =   0.0  ; err_melt_isf(207) =   0.0  ;
+name_isf(208) = 'Nordenskjold       '; name_reg(208) = 'Western Ross       '; melt_isf(208) =   0.0  ; err_melt_isf(208) =   0.0  ;
+name_isf(209) = 'Tripp              '; name_reg(209) = 'Western Ross       '; melt_isf(209) =   0.0  ; err_melt_isf(209) =   0.0  ;
+name_isf(210) = 'Hamilton           '; name_reg(210) = 'Eastern Ross       '; melt_isf(210) =   0.0  ; err_melt_isf(210) =   0.0  ;
+name_isf(211) = 'Richter            '; name_reg(211) = 'Eastern Ross       '; melt_isf(211) =   0.0  ; err_melt_isf(211) =   0.0  ;
+name_isf(212) = 'Frost./Shum./Anada.'; name_reg(212) = 'Eastern Ross       '; melt_isf(212) =   0.0  ; err_melt_isf(212) =   0.0  ; !** Frostman-Lord-Shuman-Anandakri
+name_isf(213) = 'Hull               '; name_reg(213) = 'Eastern Ross       '; melt_isf(213) =   0.0  ; err_melt_isf(213) =   0.0  ;
+name_isf(214) = 'Garfield/Perkins   '; name_reg(214) = 'Eastern Ross       '; melt_isf(214) =   0.0  ; err_melt_isf(214) =   0.0  ;
+name_isf(215) = 'Rose Point         '; name_reg(215) = 'Eastern Ross       '; melt_isf(215) =   0.0  ; err_melt_isf(215) =   0.0  ;
+name_isf(216) = 'Jackson            '; name_reg(216) = 'Eastern Ross       '; melt_isf(216) =   0.0  ; err_melt_isf(216) =   0.0  ;
