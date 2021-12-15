@@ -2,7 +2,7 @@ from scipy.spatial import cKDTree
 from tqdm.notebook import tqdm, trange
 import xarray as xr
 import numpy as np
-import multimelt.useful_functions as uf
+import basal_melt_param.useful_functions as uf
 
 
 # find shortest distance of isf_points to line
@@ -96,7 +96,7 @@ def prepare_box_charac(kisf, isf_var_of_int, ice_draft, isf_conc, dx, dy, max_nb
     kisf : int
         ID of the ice shelf of interest
     isf_var_of_int : xarray.Dataset
-        Dataset containing the variables ``ISF_mask`` with the coordinates ``['x','y']``
+        Dataset containing the variables ``ISF_mask`` with the coordinates ``['x','y']`` and ``isf_name``
     ice_draft : xarray.DataArray
         Ice draft in m. The value must be negative under water.
     isf_conc : floats between 0 and 1
@@ -163,8 +163,9 @@ def prepare_box_charac(kisf, isf_var_of_int, ice_draft, isf_conc, dx, dy, max_nb
             nD1 = 1
         else:
             nD1 = check_boxes(box_charac, min(nD2 - 1, 2))
+                
         nD = np.array([nD3, nD2, nD1])
-    
+        
         ds_2D = xr.Dataset(
             {'dGL': (isf_area['dGL'].dims, isf_area['dGL']),
              'dIF': (isf_area['dIF'].dims, isf_area['dIF']),
@@ -182,6 +183,42 @@ def prepare_box_charac(kisf, isf_var_of_int, ice_draft, isf_conc, dx, dy, max_nb
         coords={'box_nb_tot': range(1, max_nb_box + 1), 'box_nb': range(1, max_nb_box + 1),'config': range(3, 0, -1)})
 
         return ds_2D, ds_1D
+    
+def box_nb_like_reese(Nisf_list,dGL_all, dGL_max, n_max, file_isf):
+    
+    """
+    Compute the number of boxes for each ice shelf according to the criterion given in Eq. 9 in Reese et al. 2018.
+    
+    
+    Parameters
+    ----------
+    Nisf_list: array of int
+        List containing the ice shelf IDs for all ice shelves of interest. 
+    dGL_all: array
+        Distance between each point and the closest grounding line.
+    dGL_max: float
+        Maximum distance between a point and the closest grounding line in the whole domain. 
+    n_max: int
+        Maximum possible amount of boxes.
+    file_isf: xr.Dataset
+        mask_file containing ``ISF_mask``.
+    
+
+    Returns
+    -------
+    nD_all: xr.DataArray
+        Corresponding amount of boxes for each ice shelf of Nisf_list.
+    """
+    
+    d_max = dGL_max
+    nD_list = []
+    for kisf in Nisf_list:
+        dGL_max = dGL_all.where(file_isf['ISF_mask']==kisf,drop=True).max()
+        nD = 1+np.round(np.sqrt(dGL_max/d_max)*(n_max-1))
+        nD_list.append(nD.astype(int))
+    
+    nD_all = xr.concat(nD_list, dim='Nisf')
+    return nD_all
 
 def loop_box_charac(Nisf_list,isf_var_of_int, ice_draft, isf_conc, outputpath_boxes, max_nb_box=10):
     
@@ -221,6 +258,7 @@ def loop_box_charac(Nisf_list,isf_var_of_int, ice_draft, isf_conc, outputpath_bo
     n = 0
     ds_1D_all = [ ]
     nisf_list_ok = [ ]
+    dGL_max_list_ok = [ ]
     # Calculate total area and mean depth of each box for configurations of total nb of boxes from 1 to 10 :
     for kisf in tqdm(Nisf_list):
         
@@ -235,12 +273,24 @@ def loop_box_charac(Nisf_list,isf_var_of_int, ice_draft, isf_conc, outputpath_bo
             
             ds_1D_all.append(ds_1D)
             nisf_list_ok.append(kisf)
+            dGL_max_list_ok.append(isf_var_of_int['dGL'].where(isf_var_of_int['ISF_mask']==kisf).max())
             
     out_ds_2D = ds_box_charac_2D.reindex_like(isf_var_of_int['ISF_mask'])
     out_ds_1D = xr.concat(ds_1D_all, dim='Nisf')
     out_ds_1D = out_ds_1D.assign_coords({'Nisf': nisf_list_ok})
     
-    return out_ds_2D, out_ds_1D
+    dGL_max_ok = xr.concat(dGL_max_list_ok, dim='Nisf')
+    dGL_max_all = dGL_max_ok.max()
+
+    # add Reese box config
+    box_config_4 = box_nb_like_reese(Nisf_list,out_ds_2D['dGL'],dGL_max_all,5,isf_var_of_int).rename('nD_config')
+    box_config_4_da = xr.DataArray(data=box_config_4, dims=['Nisf'])
+    box_config_4_da = box_config_4_da.assign_coords({'Nisf': box_config_4.Nisf, 'config': 4})
+    
+    new_config = xr.concat([out_ds_1D['nD_config'],box_config_4_da], dim='config').astype(int)
+    new_box_1D = out_ds_1D[['box_area','box_depth_below_surface']].merge(new_config)
+    
+    return out_ds_2D, new_box_1D
         
             #if outfile:
                 #outfile.to_netcdf(outputpath_boxes + name_file + '_box_isf' + '{0:03}'.format(kisf.values) + '.nc', 'w')

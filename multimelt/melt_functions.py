@@ -1,6 +1,6 @@
 import numpy as np
-from multimelt.constants import *
-import multimelt.useful_functions as uf
+from basal_melt_param.constants import *
+import basal_melt_param.useful_functions as uf
 import xarray as xr
 import time
 from tqdm.notebook import trange, tqdm
@@ -745,7 +745,7 @@ def plume_param(T_in, S_in, ice_draft_depth, zGL, alpha, gamma, E0, picop=False)
 def plume_param_modif(T_loc, S_loc, ice_draft_depth, deep_zGL, deep_alpha, alpha_loc, T_gl, Tf_gl, E0, gamma, thermal_forcing_avg):
     
     """
-    Apply the plume parametrization with modifications.
+    Apply the plume parametrization with modifications (OLD VERSION - DO NOT NECESSARILY USE!).
     
     This function computes the basal melt based on a plume parametrization (see Lazeroms et al. 2018 and Lazeroms et al. 2019) with modifications from pers. comm. between A. Jenkins and N. Jourdain.
     
@@ -790,6 +790,111 @@ def plume_param_modif(T_loc, S_loc, ice_draft_depth, deep_zGL, deep_alpha, alpha
     melt_rate = Mterm * M_hat
 
     return melt_rate
+
+
+    
+def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max_isf,zGL_isf,alpha_isf,conc_isf,dGL_isf,gamma,E0):
+    
+    """
+    Apply the plume parametrization with modifications (from Burgard et al. 2021).
+    
+    This function computes the basal melt based on a plume parameterisation (see Lazeroms et al. 2018 and Lazeroms et al. 2019) with modifications from pers. comm. between A. Jenkins and C. Burgard & N. Jourdain.
+    
+    Parameters
+    ----------
+    theta_isf : array
+        Ambient temperature profile in degrees C.
+    salinity_isf : array
+        Ambient salinity profile in psu.
+    ice_draft_points : array
+        Depth of the ice draft in m (depth is positive!).
+    front_bot_dep_max_isf : scalar
+        Maximum depth of the continental shelf at the entry of the ice shelf (depth is positive!)
+    zGL_isf: scalar or array
+        Depth of the grounding line in m (depth is negative!), containing 'simple' and 'lazero' option.
+    alpha_isf: scalar or array
+        Slope angle in rad (must be positive), containing 'simple' and 'lazero' option.
+    conc_isf: array
+        Concentration of grid cell covered by the ice shelf.
+    dGL_isf : array
+        Distance between local point and nearest grounding line in m.
+    Tf_gl : scalar (or array?)
+        Freezing temperature at the grounding line in degrees C.
+    E0: scalar
+        Entrainment coefficient. Can be modulated for tuning.
+    gamma: scalar
+        Effective thermal Stanton number. Can be modulated for tuning.
+
+    Returns
+    -------
+    melt_rate : scalar or array
+        Melt rate in m ice per second.
+    """
+    
+    zGL_simple_isf = -1*zGL_isf.sel(option='simple').max()
+    zGL_lazero_points = -1*zGL_isf.sel(option='lazero')
+    
+    depth_GL_to_interp = zGL_simple_isf.where(zGL_simple_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
+    S_GL = salinity_isf.interp({'depth': depth_GL_to_interp}).drop('depth')
+    Tf_GL = freezing_temperature(S_GL, -1*zGL_simple_isf)
+
+    ###### LOCAL STUFF
+    depth_of_int = ice_draft_points.where(ice_draft_points < front_bot_dep_max_isf, front_bot_dep_max_isf)
+    # Local temperature and salinity at ice draft depth
+    T0_loc = theta_isf.interp({'depth': depth_of_int}).drop('depth')
+    S0_loc = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
+    Tf_loc = freezing_temperature(S0_loc, -1*ice_draft_points)
+    c_rho_1_loc, c_rho_2_loc, c_tau_loc = compute_c_rho_tau(gamma, S0_loc)
+    alpha_loc = alpha_isf.sel(option='appenB')
+    
+    ##### CAVITY MEAN => Mhat
+    # Mean temperature and salinity over whole ice-shelf base
+    T0_mean_cav = uf.weighted_mean(T0_loc, ['mask_coord'], conc_isf)
+    S0_mean_cav = uf.weighted_mean(S0_loc, ['mask_coord'], conc_isf)
+    # Mean coefficients over whole ice-shelf base
+    c_rho_1_mean_cav, c_rho_2_mean_cav, c_tau_mean_cav = compute_c_rho_tau(gamma, S0_mean_cav)
+    # Length scale and M_hat over whole ice-shelf base
+    x_mean_cav = compute_X_hat(-1*ice_draft_points,-1*zGL_simple_isf,T0_mean_cav,Tf_GL,E0,c_tau_mean_cav,alpha_isf.sel(option='simple'),gamma)
+    M_hat = compute_M_hat(x_mean_cav)
+    
+    ##### UPSTREAM STUFF
+    ### if we want to take the mean of the profile in front of the ice shelf
+    # interpolate T and S profiles on regular depth axis for the mean
+    depth_axis_loc = xr.DataArray(data=np.arange(1,zGL_simple_isf+1),dims=['depth']).chunk({'depth':50})
+    # make sure to not use T and S lower than the maximum front depth
+    depth_axis_loc_cut = depth_axis_loc.where(depth_axis_loc<front_bot_dep_max_isf,front_bot_dep_max_isf)
+    depth_axis_loc_cut = depth_axis_loc_cut.assign_coords({'depth':depth_axis_loc})
+    # do the interpolation
+    theta_1m = theta_isf.interp({'depth': depth_axis_loc_cut}).chunk({'depth':50})
+    salinity_1m = salinity_isf.interp({'depth': depth_axis_loc_cut}).chunk({'depth':50})
+    
+    # depth between grounding line and local ice draft depth
+    depth_range_mask = (theta_1m.depth <= zGL_lazero_points+1) & (theta_1m.depth >= ice_draft_points-1)
+    
+    # average upstream properties
+    theta_ups = theta_1m.where(depth_range_mask).mean('depth')
+    salinity_ups = salinity_1m.where(depth_range_mask).mean('depth')
+    
+    Tf_ups = freezing_temperature(salinity_ups,-1*zGL_lazero_points)
+    thermal_forcing_ups = theta_ups - Tf_ups
+    
+    # angle between local point and grounding line
+    alpha_ups = np.arctan((zGL_lazero_points - ice_draft_points)/dGL_isf)
+    alpha_ups = alpha_ups.where(dGL_isf>0, alpha_loc)
+
+    c_rho_1_ups, c_rho_2_ups, c_tau_ups = compute_c_rho_tau(gamma, salinity_ups)
+    #c_rho_1_ups0, c_rho_2_ups0, c_tau_ups0 = compute_c_rho_tau(gamma, uf.weighted_mean(S0_loc.where(both_masks2), 'mask_coord', conc_isf.where(both_masks2))) # same as above
+    
+    Mterm = (np.sqrt((beta_coeff_lazero*S0_loc*g) / (l_3*(L_i/c_po)**3)) 
+    * np.sqrt((1 - c_rho_1_loc * gamma) / (C_d_lazero + E0*np.sin(alpha_loc))) 
+    * np.sqrt((gamma * E0 * np.sin(alpha_loc)) / (gamma + c_tau_loc + E0*np.sin(alpha_loc))) * (T0_loc - Tf_loc)
+    * ((gamma * E0 * np.sin(alpha_ups)) / (gamma + c_tau_ups + E0*np.sin(alpha_ups))) * thermal_forcing_ups) 
+    
+    ##### MELT RATE
+    melt_rate = M_hat * Mterm
+    
+    return melt_rate.squeeze().load()#.drop('option')  
+
 
 def T_correction_PICO(isf_name, T_in):
     
@@ -846,13 +951,12 @@ def T_correction_PICO(isf_name, T_in):
     T_corrected = T_in + T_correction
     return T_corrected
 
-
 def PICO_and_PICOP_param(T_in,S_in,box_location,box_depth_below_surface,box_area_whole,nD,spatial_coord,isf_cell_area,
                          gamma, E0, C,
                          picop='no',pism_version='no',zGL=None,alpha=None,ice_draft_neg=None):
     
     """
-    Compute melt rate using PICO or PICOP.
+    Compute melt rate using PICO or PICOP. THIS FUNCTION IS NOT USED ANYMORE => NOW TWO SEPARATE FOR PICO AND PICOP
     
     This function computes the basal melt based on PICO or PICOP (see Reese et al., 2018 and Pelle et al., 2019).
     
@@ -889,7 +993,7 @@ def PICO_and_PICOP_param(T_in,S_in,box_location,box_depth_below_surface,box_area
     alpha: scalar or array
         Slope angle in rad (must be positive).
     ice_draft_neg : scalar or array
-        Depth of the ice draft in m (depth is negative!).
+        Depth of the ice draft in m (depth is negative!).#
 
     Returns
     -------
@@ -973,6 +1077,230 @@ def PICO_and_PICOP_param(T_in,S_in,box_location,box_depth_below_surface,box_area
     return T_all_boxes.drop('box_nb').drop('box_nb_tot'), S_all_boxes.drop('box_nb').drop('box_nb_tot'), m_all_boxes.drop('box_nb').drop('box_nb_tot')
 
 
+def PICO_param(T_in,S_in,box_location,box_depth_below_surface,box_area_whole,nD,spatial_coord,isf_cell_area,gamma, C, ice_draft_neg, pism_version='no'):
+    
+    """
+    Compute melt rate using PICO.
+    
+    This function computes the basal melt based on PICO  (see Reese et al., 2018).
+    
+    Parameters
+    ----------
+    T_in : xr.DataArray
+        Temperature entering the cavity in degrees C.
+    S_in : xr.DataArray
+        Salinity entering the cavity in psu.
+    box_location : xr.DataArray
+        Spatial location of the boxes (dims=['box_nb_tot']), 
+    box_depth_below_surface : xr.DataArray
+        Mean ice draft depth of the box in m (dims=['box_nb_tot','box_nb']). Negative downwards!
+    box_area_whole : xr.DataArray
+        Area of the different boxes (dims=['box_nb_tot','box_nb']).
+    nD: scalar
+        Number of boxes to use (i.e. box_nb_tot).
+    spatial_coord : list of str
+        Coordinate(s) to use for spatial means.
+    isf_cell_area: float
+        Area covered by ice shelf in each cell
+    gamma : float
+        Gamma to be tuned in m/s.
+    C : float
+        Circulation parameter C (Sv m3 kg-1 = m6 kg-1 s-1) in [0.1;9]*1.e6.
+    ice_draft_neg : scalar or array
+        Depth of the ice draft in m (depth is negative!).
+    pism_version: str
+        Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
+
+    Returns
+    -------
+    T_all_boxes : xr.DataArray
+        Temperature field in degrees C.
+    S_all_boxes : xr.DataArray
+        Salinity field in psu.
+    m_all_boxes : xr.DataArray
+        Melt rate field in m ice per second. 
+    """
+        
+    box_loc = box_location.sel(box_nb_tot=nD)
+    #box_loc = box_loc_orig.where(box_loc_orig < 11)
+
+    box_depth_all = box_depth_below_surface.sel(box_nb_tot=nD)
+    box_area_all = box_area_whole.sel(box_nb_tot=nD)
+
+    if pism_version == 'yes':
+        box_depth = ice_draft_neg.where(box_loc == box_area_all.box_nb)
+    else: 
+        box_depth = box_depth_all
+    box_area = box_area_all
+
+    for bbox in range(1,nD+1):
+
+        if bbox == 1:
+            
+            T_prev_box = T_in
+            S_prev_box = S_in
+
+            q_orig, T_cur_box, S_cur_box = compute_T_S_one_box_PICO(T_prev_box,S_prev_box,
+                                                                    box_depth.sel(box_nb=bbox),
+                                                                    box_area.sel(box_nb=bbox),
+                                                                    bbox,
+                                                                    C,gamma,None)
+            T_all_boxes = T_cur_box.where(box_loc == bbox)
+            S_all_boxes = S_cur_box.where(box_loc == bbox)
+            q = uf.weighted_mean(q_orig.where(box_loc == bbox),spatial_coord,isf_cell_area.where(box_loc == bbox))
+
+        else:
+
+            if pism_version=='yes':
+                T_prev_box = uf.weighted_mean(T_cur_box.where(box_loc == bbox-1),spatial_coord,isf_cell_area.where(box_loc == bbox-1))
+                S_prev_box = uf.weighted_mean(S_cur_box.where(box_loc == bbox-1),spatial_coord,isf_cell_area.where(box_loc == bbox-1))
+            else:
+                T_prev_box = T_cur_box
+                S_prev_box = S_cur_box
+
+            q, T_cur_box, S_cur_box = compute_T_S_one_box_PICO(T_prev_box,S_prev_box,
+                                                                box_depth.sel(box_nb=bbox),
+                                                                box_area.sel(box_nb=bbox),
+                                                                bbox,
+                                                                C,gamma,q)
+
+            T_all_boxes = T_all_boxes.combine_first(T_cur_box.where(box_loc == bbox))
+            S_all_boxes = S_all_boxes.combine_first(S_cur_box.where(box_loc == bbox))     
+
+            
+        thermal_forcing_box = -(freezing_temperature(S_cur_box, box_depth.sel(box_nb=bbox)) - T_cur_box)
+        m_cur_box = linear_local_param(gamma, melt_factor, thermal_forcing_box)
+
+        if bbox == 1:
+            m_all_boxes = m_cur_box.where(box_loc == bbox)
+        else:
+            m_all_boxes = m_all_boxes.combine_first(m_cur_box.where(box_loc == bbox))
+
+
+    return T_all_boxes.drop('box_nb').drop('box_nb_tot'), S_all_boxes.drop('box_nb').drop('box_nb_tot'), m_all_boxes.drop('box_nb').drop('box_nb_tot')
+
+
+
+def PICOP_param(T_in,S_in,box_location,box_depth_below_surface,box_area_whole,nD,spatial_coord,isf_cell_area,
+                         gamma_pico, gamma_plume, E0, C,zGL,alpha,ice_draft_neg,pism_version='no',picop_opt='2019'):
+    
+    """
+    Compute melt rate using PICOP.
+    
+    This function computes the basal melt based on PICOP (see Pelle et al., 2019). Using the empirical equations from Lazeroms et al. 2018.
+    
+    Parameters
+    ----------
+    T_in : xr.DataArray
+        Temperature entering the cavity in degrees C.
+    S_in : xr.DataArray
+        Salinity entering the cavity in psu.
+    box_location : xr.DataArray
+        Spatial location of the boxes (dims=['box_nb_tot']), 
+    box_depth_below_surface : xr.DataArray
+        Mean ice draft depth of the box in m (dims=['box_nb_tot','box_nb']). Negative downwards!
+    box_area_whole : xr.DataArray
+        Area of the different boxes (dims=['box_nb_tot','box_nb']).
+    nD: scalar
+        Number of boxes to use (i.e. box_nb_tot).
+    spatial_coord : list of str
+        Coordinate(s) to use for spatial means.
+    isf_cell_area: float
+        Area covered by ice shelf in each cell
+    gamma_pico : float
+        Gamma to be used in PICO part.
+    gamma_plume : float
+        Gamma to be used in plume part.
+    E0 : float
+        Entrainment coefficient.
+    C : float
+        Circulation parameter C (Sv m3 kg-1 = m6 kg-1 s-1) in [0.1;9]*1.e6.
+    pism_version: str
+        Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
+    zGL: scalar or array
+        Depth of the grounding line where the source of the plume is in m (depth is negative!).
+    alpha: scalar or array
+        Slope angle in rad (must be positive).
+    ice_draft_neg : scalar or array
+        Depth of the ice draft in m (depth is negative!).
+    pism_version: str
+        Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
+    picop_opt: str
+        Can be ``2019``, ``2018`` , depending on if you want to use PICOP with analytical plume param or with empirical plume param.
+
+    Returns
+    -------
+    T_all_boxes : xr.DataArray
+        Temperature field in degrees C.
+    S_all_boxes : xr.DataArray
+        Salinity field in psu.
+    m_all_boxes : xr.DataArray
+        Melt rate field in m ice per second. 
+    """
+        
+    box_loc = box_location.sel(box_nb_tot=nD)
+    #box_loc = box_loc_orig.where(box_loc_orig < 11)
+
+    box_depth_all = box_depth_below_surface.sel(box_nb_tot=nD)
+    box_area_all = box_area_whole.sel(box_nb_tot=nD)
+
+    if pism_version == 'yes':
+        box_depth = ice_draft_neg.where(box_loc == box_area_all.box_nb)
+    else: 
+        box_depth = box_depth_all
+    box_area = box_area_all
+
+    for bbox in range(1,nD+1):
+
+        if bbox == 1:
+            
+            T_prev_box = T_in
+            S_prev_box = S_in
+
+            q_orig, T_cur_box, S_cur_box = compute_T_S_one_box_PICO(T_prev_box,S_prev_box,
+                                                                    box_depth.sel(box_nb=bbox),
+                                                                    box_area.sel(box_nb=bbox),
+                                                                    bbox,
+                                                                    C,gamma_pico,None)
+            T_all_boxes = T_cur_box.where(box_loc == bbox)
+            S_all_boxes = S_cur_box.where(box_loc == bbox)
+            q = uf.weighted_mean(q_orig.where(box_loc == bbox),spatial_coord,isf_cell_area.where(box_loc == bbox))
+
+        else:
+
+            if pism_version=='yes':
+                T_prev_box = uf.weighted_mean(T_cur_box.where(box_loc == bbox-1),spatial_coord,isf_cell_area.where(box_loc == bbox-1))
+                S_prev_box = uf.weighted_mean(S_cur_box.where(box_loc == bbox-1),spatial_coord,isf_cell_area.where(box_loc == bbox-1))
+            else:
+                T_prev_box = T_cur_box
+                S_prev_box = S_cur_box
+
+            q, T_cur_box, S_cur_box = compute_T_S_one_box_PICO(T_prev_box,S_prev_box,
+                                                                box_depth.sel(box_nb=bbox),
+                                                                box_area.sel(box_nb=bbox),
+                                                                bbox,
+                                                                C,gamma_pico,q)
+
+            T_all_boxes = T_all_boxes.combine_first(T_cur_box.where(box_loc == bbox))
+            S_all_boxes = S_all_boxes.combine_first(S_cur_box.where(box_loc == bbox))     
+
+
+        ice_draft_depth_box = ice_draft_neg.where(box_loc == bbox) #zz1
+
+        zGL_box = zGL.where(box_loc == bbox)
+        alpha_box = alpha.where(box_loc == bbox)
+        if picop_opt == '2018':
+            m_cur_box_pts = plume_param(T_cur_box, S_cur_box, ice_draft_depth_box, zGL_box, alpha_box, gamma_plume, E0, picop=True)
+        elif picop_opt == '2019':
+            m_cur_box_pts = plume_param(T_cur_box, S_cur_box, ice_draft_depth_box, zGL_box, alpha_box, gamma_plume, E0, picop=False)
+        if bbox == 1:
+            m_all_boxes = m_cur_box_pts.copy()
+        else:
+            m_all_boxes = m_all_boxes.combine_first(m_cur_box_pts)
+
+    return T_all_boxes.drop('box_nb').drop('box_nb_tot'), S_all_boxes.drop('box_nb').drop('box_nb_tot'), m_all_boxes.drop('box_nb').drop('box_nb_tot')
+
+
 def merge_over_dim(da_in, da_out, dim, dim_index):
     
     """
@@ -1042,10 +1370,13 @@ def calculate_melt_rate_2D_simple_1isf(kisf, T_S_profile, geometry_info_2D, geom
     
     # decide on the depth to which to extrapolate the entry temperature
     if mparam[-6::]=='bottom':
+        mparam0 = mparam[:-7:]
         # deepest entrance point
-        depth_of_int = geometry_isf_1D['front_bot_depth_max'] # deepest point of the entrance
+        #depth_of_int = geometry_isf_1D['front_bot_depth_max'] # deepest point of the entrance
+        depth_of_int = geometry_isf_1D['front_bot_depth_avg']
         depth_of_int.where(geometry_isf_2D)
     else:
+        mparam0 = mparam
         # either the depth of the draft or the deepest entrance point
         depth_of_int = geometry_isf_2D['ice_draft_pos'].where(geometry_isf_2D['ice_draft_pos']<geometry_isf_1D['front_bot_depth_max'], geometry_isf_1D['front_bot_depth_max']) # ice draft depth or deepest entrance depth
     
@@ -1062,30 +1393,33 @@ def calculate_melt_rate_2D_simple_1isf(kisf, T_S_profile, geometry_info_2D, geom
     # compute thermal forcing
     thermal_forcing = T0 - Tf
     thermal_forcing_avg = uf.weighted_mean(thermal_forcing, ['mask_coord'], geometry_isf_2D['isfdraft_conc']) #weighted mean 
+    S_avg = uf.weighted_mean(S0, ['mask_coord'], geometry_isf_2D['isfdraft_conc'])
     
-    if U_param:
+    if U_param and 'mixed' in mparam0:
+        U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*f_coriolis)) * S_avg
+    elif U_param and 'mixed' not in mparam0:
         U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*f_coriolis)) * S0
     else:
         U_factor = melt_factor
 
     #print('here4')
     # Melt in m/s (meters of ice per s), positive if ice ablation
-    if mparam == 'linear_local':
+    if mparam0 == 'linear_local':
         melt_rate = linear_local_param(gamma, melt_factor, thermal_forcing) 
-    elif mparam == 'quadratic_local':
+    elif mparam0 == 'quadratic_local':
         melt_rate = quadratic_local_param(gamma, melt_factor, thermal_forcing, U_factor)
-    elif mparam == 'quadratic_local_locslope':
+    elif mparam0 == 'quadratic_local_locslope':
         local_angle = geometry_isf_2D['alpha'].sel(option='appenB')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing, U_factor, local_angle)
-    elif mparam == 'quadratic_local_cavslope':
+    elif mparam0 == 'quadratic_local_cavslope':
         local_angle = geometry_isf_2D['alpha'].sel(option='simple')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing, U_factor, local_angle)
-    elif mparam == 'quadratic_mixed_mean':  
+    elif mparam0 == 'quadratic_mixed_mean':  
         melt_rate = quadratic_mixed_mean(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor)
-    elif mparam == 'quadratic_mixed_locslope':
+    elif mparam0 == 'quadratic_mixed_locslope':
         local_angle = geometry_isf_2D['alpha'].sel(option='appenB')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor, local_angle)
-    elif mparam == 'quadratic_mixed_cavslope':
+    elif mparam0 == 'quadratic_mixed_cavslope':
         local_angle = geometry_isf_2D['alpha'].sel(option='simple')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor, local_angle)
         
@@ -1098,6 +1432,10 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
 
     """
     Function to compute melt from plume parameterisations for one ice shelf.
+    'lazero19': NOT USED ANYMORE - uses hydrographic properties extrapolated to the grounding line as ambient temperature and salinity
+    'lazero19_2': uses average of hydrographic properties extrapolated to local ice draft depth as ambient temperature and salinity
+    'lazero19_modif': NOT USED ANYMORE - OLD version of modification - will be deleted in future
+    'lazero19_modif2': Modification presented in Burgard et al. 2021
         
     Parameters
     ----------
@@ -1128,6 +1466,7 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
     zGL_isf = geometry_isf_2D['zGL']
     alpha_isf = geometry_isf_2D['alpha']
     ice_draft_pos_isf = geometry_isf_2D['ice_draft_pos']
+    dGL_isf = geometry_isf_2D['dGL']
     conc_isf = geometry_isf_2D['isfdraft_conc']
     isf_mask = geometry_isf_2D['ISF_mask']
     isf_cell_area = geometry_isf_2D['grid_cell_area_weighted']
@@ -1137,27 +1476,68 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
     salinity_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf)
     
     zGL_simple_pos = -1*zGL_isf.sel(option='simple') 
-        
+
     if mparam == 'lazero19':
+        
         moption = 'lazero'
         zGL = zGL_isf.sel(option=moption)
         zGL_pos = -1*zGL
         alpha = alpha_isf.sel(option=moption)
-
-    if mparam == 'lazero19_modif':
-        # either the depth of the draft or the deepest entrance point
-        depth_of_int = ice_draft_pos_isf.where(ice_draft_pos_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
-
-    elif mparam == 'lazero19':
+        
         # grounding line depth or deepest point of entrance 
         depth_of_int = zGL_pos.where(zGL_pos < front_bot_dep_max_isf, front_bot_dep_max_isf)
+        # find temperature and salinity at the given depth
+        depth_of_int = depth_of_int.where(isf_mask)
+        T0 = theta_isf.interp({'depth': depth_of_int}).drop('depth')
+        S0 = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
         
-    # find temperature and salinity at the given depth
-    depth_of_int = depth_of_int.where(isf_mask)
-    T0 = theta_isf.interp({'depth': depth_of_int}).drop('depth')
-    S0 = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
+        melt_rate = plume_param(T0, S0, -1*ice_draft_pos_isf, zGL.squeeze().drop('option'), alpha.squeeze().drop('option'), 
+                                      gamma, E0)
+    
+    elif mparam == 'lazero19_2':
+        
+        moption = 'lazero'
+        zGL = zGL_isf.sel(option=moption)
+        zGL_pos = -1*zGL
+        alpha = alpha_isf.sel(option=moption)
+        
+        #### if we want to take the mean of the profile in front of the ice shelf
+        ## interpolate T and S profiles on regular depth axis for the mean
+        #depth_axis_loc = xr.DataArray(data=np.arange(zGL_pos.max()+1),dims=['depth'])
+        ## make sure to not use T and S lower than the maximum front depth
+        #depth_axis_loc = depth_axis_loc.where(depth_axis_loc<front_bot_dep_max_isf,front_bot_dep_max_isf)
+        ## do the interpolation
+        #theta_1m = theta_isf.interp({'depth': depth_axis_loc})
+        #salinity_1m = salinity_isf.interp({'depth': depth_axis_loc})
+        ## make a mean over the whole profile
+        #theta_mean = theta_1m.mean('depth')
+        #salinity_mean = salinity_1m.mean('depth')
 
-    if mparam == 'lazero19_modif':
+        # depth_of_int to which to interpolate the T and S at ice draft depth
+        depth_of_int = ice_draft_pos_isf.where(ice_draft_pos_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
+        # Local temperature and salinity at ice draft depth
+        T0_loc = theta_isf.interp({'depth': depth_of_int}).drop('depth')
+        S0_loc = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
+        
+        # Mean temperature and salinity over whole ice-shelf base (cavity mean)
+        T0_mean_cav = uf.weighted_mean(T0_loc, ['mask_coord'], conc_isf)
+        S0_mean_cav = uf.weighted_mean(S0_loc, ['mask_coord'], conc_isf)
+        #print(kisf)
+        #print(T0_mean_cav)
+        #print(S0_mean_cav)
+        
+        melt_rate = plume_param(T0_mean_cav, S0_mean_cav, -1*ice_draft_pos_isf, zGL.squeeze().drop('option'), alpha.squeeze().drop('option'), 
+                              gamma, E0)
+
+    elif mparam == 'lazero19_modif':
+        
+        # either the depth of the draft or the deepest entrance point
+        depth_of_int = ice_draft_pos_isf.where(ice_draft_pos_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
+        # find temperature and salinity at the given depth
+        depth_of_int = depth_of_int.where(isf_mask)
+        T0 = theta_isf.interp({'depth': depth_of_int}).drop('depth')
+        S0 = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
+        
         # compute the freezing temperature at the ice draft depth
         Tf = freezing_temperature(S0, -1*ice_draft_pos_isf)
         thermal_forcing = T0 - Tf
@@ -1179,17 +1559,19 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
                                             alpha_isf.sel(option='lazero').squeeze().drop('option'), 
                                             T0b, Tfb, E0, gamma, thermal_forcing_avg)
 
-    elif mparam == 'lazero19': 
-        melt_rate = plume_param(T0, S0, -1*ice_draft_pos_isf, zGL.squeeze().drop('option'), alpha.squeeze().drop('option'), 
-                                      gamma, E0)
+    
+    elif mparam == 'lazero19_modif2':
+        melt_rate = plume_param_modif2(theta_isf,salinity_isf,
+                                       ice_draft_pos_isf,front_bot_dep_max_isf,zGL_isf,alpha_isf,conc_isf,dGL_isf,
+                                       gamma,E0)
     
     return melt_rate
 
 
 
 
-def calculate_melt_rate_2D_boxes_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, box_charac_all_2D, box_charac_all_1D, isf_stack_mask, mparam, box_tot_nb, gamma, C, E0, 
-                                      angle_option, pism_version, picop_opt, T_corrections):
+def calculate_melt_rate_2D_boxes_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, box_charac_all_2D, box_charac_all_1D, isf_stack_mask, mparam, box_tot_nb, gamma, C,
+                                      angle_option, pism_version, T_corrections):
     
     """
     Function to compute melt from box parameterisations for one ice shelf.
@@ -1218,18 +1600,96 @@ def calculate_melt_rate_2D_boxes_1isf(kisf, T_S_profile, geometry_info_2D, geome
         Gamma to be tuned.
     C : float
         Circulation parameter C (Sv m3 kg-1 = m6 kg-1 s-1) in [0.1;9]*1.e6.
+    pism_version: str
+        Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
+    T_corrections : Boolean
+        If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
+
+    Returns
+    -------
+    m_out : xr.DataArray
+        Horizontal distribution of the melt rate in m ice/s for the ice shelf of interest.
+    """  
+    
+    # select indices corresponding to the ice shelf points
+    #print(angle_option)
+    geometry_isf_2D = uf.choose_isf(geometry_info_2D.sel(option=angle_option),isf_stack_mask, kisf)
+    conc_isf = geometry_isf_2D['isfdraft_conc']
+    isf_cell_area = geometry_isf_2D['grid_cell_area_weighted']
+    ice_draft_neg_isf = -1*geometry_isf_2D['ice_draft_pos']
+    deepest_GL = -1*uf.choose_isf(geometry_info_2D['zGL'].sel(option='simple'),isf_stack_mask, kisf).max()
+    front_bot_dep_max_isf = geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf)
+    front_bot_dep_avg_isf = geometry_info_1D['front_bot_depth_avg'].sel(Nisf=kisf)
+    
+    # box characteristics
+    box_charac_1D_isf = box_charac_all_1D.sel(Nisf=kisf)
+    box_charac_2D_isf = uf.choose_isf(box_charac_all_2D, isf_stack_mask, kisf)
+
+    # Entering temperature and salinity profiles
+    #depth_of_int = geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf)
+    depth_of_int = geometry_info_1D['front_bot_depth_avg'].sel(Nisf=kisf)
+    #depth_of_int = deepest_GL.where(deepest_GL < front_bot_dep_avg_isf, front_bot_dep_avg_isf)
+    #print(depth_of_int.values)
+    T_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop('depth')
+    S_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop('depth')
+    
+    if T_corrections:
+        T_isf = T_correction_PICO(geometry_info_1D['isf_name'].sel(Nisf=kisf), T_isf)
+
+        
+    # compute the melt rate
+    T_out, S_out, m_out = PICO_param(T_isf,S_isf,
+                                   box_charac_2D_isf['box_location'],
+                                   box_charac_1D_isf['box_depth_below_surface'],
+                                   box_charac_1D_isf['box_area'],
+                                   box_tot_nb, ['mask_coord'],
+                                   isf_cell_area,
+                                   gamma, C,
+                                   ice_draft_neg_isf,
+                                   pism_version)
+
+    return m_out
+
+def calculate_melt_rate_2D_picop_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, box_charac_all_2D, box_charac_all_1D, isf_stack_mask, mparam, box_tot_nb, gamma_pico, gamma_plume, C, E0, 
+                                      angle_option, pism_version, picop_opt):
+    
+    """
+    Function to compute melt from box parameterisations for one ice shelf.
+        
+    Parameters
+    ----------
+    kisf : int
+        Ice shelf ID for the ice shelf of interest. 
+    T_S_profile : xarray.Dataset
+        Dataset containing temperature (in degrees C) and salinity (in psu) input profiles.
+    geometry_info_2D : xarray.Dataset
+        Dataset containing relevant 2D geometrical information.
+    geometry_info_1D : xarray.Dataset
+        Dataset containing relevant 1D geometrical information.
+    box_charac_all_2D : xarray.Dataset
+        Dataset containing relevant 2D box characteristics for all ice shelves.
+    box_charac_all_1D : xarray.Dataset
+        Dataset containing relevant 1D box characteristics for all ice shelves.
+    isf_stack_mask : xarray.DataArray
+        DataArray containing the stacked coordinates of the ice shelves (to make computing faster).
+    mparam : str
+        Parameterisation to be applied.
+    box_tot_nb : int
+        Total number of boxes
+    gamma_pico : float
+        Gamma to be used in PICO part.
+    gamma_plume : float
+        Gamma to be used in plume part.
+    C : float
+        Circulation parameter C (Sv m3 kg-1 = m6 kg-1 s-1) in [0.1;9]*1.e6.
     E0 : float
         Entrainment coefficient.
     angle_option : str
         Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
     pism_version: str
         Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
-    picop_opt : str
-        Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
-    T_corrections : Boolean
-        If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
-
-        
+    picop_opt: str
+        Can be ``2019``, ``2018`` , depending on if you want to use PICOP with analytical plume param or with empirical plume param.
         
     Returns
     -------
@@ -1251,32 +1711,28 @@ def calculate_melt_rate_2D_boxes_1isf(kisf, T_S_profile, geometry_info_2D, geome
     box_charac_2D_isf = uf.choose_isf(box_charac_all_2D, isf_stack_mask, kisf)
 
     # Entering temperature and salinity profiles
-    depth_of_int = geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf)
+    #depth_of_int = geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf)
+    depth_of_int = geometry_info_1D['front_bot_depth_avg'].sel(Nisf=kisf)
     T_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop('depth')
     S_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop('depth')
-    
-    if T_corrections:
-        T_isf = T_correction_PICO(geometry_info_1D['isf_name'].sel(Nisf=kisf), T_isf)
 
     # compute the melt rate
-    T_out, S_out, m_out = PICO_and_PICOP_param(T_isf,S_isf,
-                                               box_charac_2D_isf['box_location'],
-                                               box_charac_1D_isf['box_depth_below_surface'],
-                                               box_charac_1D_isf['box_area'],
-                                               box_tot_nb, ['mask_coord'],
-                                               isf_cell_area,
-                                               gamma, E0_lazero, C,
-                                               picop_opt,pism_version,
-                                               zGL_isf,alpha_isf,ice_draft_neg_isf)
+    T_out, S_out, m_out = PICOP_param(T_isf,S_isf,
+                                       box_charac_2D_isf['box_location'],
+                                       box_charac_1D_isf['box_depth_below_surface'],
+                                       box_charac_1D_isf['box_area'],
+                                       box_tot_nb, ['mask_coord'],
+                                       isf_cell_area,
+                                       gamma_pico, gamma_plume, E0, C, 
+                                       zGL_isf,alpha_isf,ice_draft_neg_isf,
+                                       pism_version, picop_opt)
 
     return m_out
 
 
-
-
 def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                 U_param=True, C=None, E0=None, angle_option='lazero',
-                                box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no', T_corrections=False):
+                                box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no', gamma_plume=None, T_corrections=False):
 
         """
         Wrap function to point to the right melt parameterisation for one ice shelf.
@@ -1296,7 +1752,7 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
         mparam : str
             Parameterisation to be applied.
         gamma : float
-            Gamma to be tuned.
+            Gamma to be tuned. Will be used as gamma_pico in PICOP.
         U_param : Boolean
             If ``True`` we use the complex parameterisation of U, if ``False``, this is "only" equal to (rho_sw * c_po) / (rho_i * L_i). Relevant for simple parameterisations only.
         C : float
@@ -1316,7 +1772,9 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
         pism_version: str
             Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
         picop_opt : str
-            Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
+            Can be ``2019``, ``2018`` or ``no``, depending on if you want to use PICOP with analytical plume param, with empirical plume param or the original PICO without plume. 
+        gamma_plume : float
+            Gamma to be used in the plume part of PICOP.
         T_corrections : Boolean
             If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
 
@@ -1329,30 +1787,49 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
         
         filled_TS = T_S_profile.ffill(dim='depth')
         if mparam in ['linear_local', 'quadratic_local', 'quadratic_local_locslope','quadratic_local_cavslope',
-                      'quadratic_mixed_mean', 'quadratic_mixed_locslope','quadratic_mixed_cavslope']:
+                      'quadratic_mixed_mean', 'quadratic_mixed_locslope','quadratic_mixed_cavslope',
+                     'linear_local_bottom', 'quadratic_local_bottom', 'quadratic_local_locslope_bottom','quadratic_local_cavslope_bottom',
+                      'quadratic_mixed_mean_bottom', 'quadratic_mixed_locslope_bottom','quadratic_mixed_cavslope_bottom']:
             #print('Computing simple '+mparam+' melt rates and writing to file')
             melt_rate_2D_isf = calculate_melt_rate_2D_simple_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, 
                                                                   isf_stack_mask, mparam, gamma, U_param)
-        elif mparam in ['lazero19', 'lazero19_modif']:
+        elif mparam in ['lazero19', 'lazero19_2', 'lazero19_modif', 'lazero19_modif2']:
             #print('Computing plume '+mparam+' melt rates and writing to file')
             if E0 is None:
                 print('Careful! I did not receive a E0, I am using the default value!')
                 E0 = E0_lazero
             melt_rate_2D_isf = calculate_melt_rate_2D_plumes_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, E0)
-        else:
-            #print('Computing box '+mparam+' melt rates and writing to file')
+        elif picop_opt in ['2018','2019']:
             if C is None:
                 print('Careful! I did not receive a C, I am using the default value!')
                 C = C_pico
             if E0 is None:
                 print('Careful! I did not receive a E0, I am using the default value!')
                 E0 = E0_lazero
+            if gamma_plume is None:
+                print('Careful! I did not receive a gamma_plume, I am using the default value!')
+                gamma_plume = gamma_eff_T_lazero
             if box_tot_option == 'box_nb_tot':
                 box_tot_nb = box_tot
             elif box_tot_option == 'nD_config':
                 box_tot_nb = box_charac_1D['nD_config'].sel(Nisf=kisf).sel(config=box_tot).values
+            melt_rate_2D_isf = calculate_melt_rate_2D_picop_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, box_charac_2D, box_charac_1D, isf_stack_mask, 
+                                                                 mparam, box_tot_nb, gamma, gamma_plume, C, E0, 
+                                                                 angle_option, pism_version, picop_opt)
+            
+        elif picop_opt=='no':
+            #print('Computing box '+mparam+' melt rates and writing to file')
+            if C is None:
+                print('Careful! I did not receive a C, I am using the default value!')
+                C = C_pico
+            if box_tot_option == 'box_nb_tot':
+                box_tot_nb = box_tot
+            elif box_tot_option == 'nD_config':
+                box_tot_nb = box_charac_1D['nD_config'].sel(Nisf=kisf).sel(config=box_tot).values
+            else:
+                print('Careful! I received the following as box_tot_nb: ',box_tot)
             melt_rate_2D_isf = calculate_melt_rate_2D_boxes_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, box_charac_2D, box_charac_1D, isf_stack_mask, 
-                                                                 mparam, box_tot_nb, gamma, C, E0, angle_option, pism_version, picop_opt, T_corrections)
+                                                                 mparam, box_tot_nb, gamma, C, angle_option, pism_version, T_corrections)
             
         return melt_rate_2D_isf
     
@@ -1362,7 +1839,7 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
 def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                    U_param=True, C=None, E0=None, angle_option='lazero',
                                    box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
-                                   T_corrections=False,
+                                   gamma_plume=None, T_corrections=False,
                                    options_2D=['melt_m_ice_per_y','melt_m_we_per_y'],
                                    verbose=True):
     
@@ -1406,6 +1883,8 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
         Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
     picop_opt : str
         Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
+    gamma_plume : float
+        Gamma to be used in the plume part of PICOP.
     T_corrections : Boolean
         If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
     options_2D : list of str
@@ -1435,7 +1914,7 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
         
         melt_rate_2D_isf = calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                                        U_param, C, E0, angle_option, 
-                                                       box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, T_corrections)
+                                                       box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, gamma_plume, T_corrections)
         
         if n == 0:
             ds_melt_rate_2D_all = melt_rate_2D_isf.squeeze().drop('Nisf')
@@ -1530,7 +2009,7 @@ def calculate_melt_rate_1D_all_isf(nisf_list, ds_melt_rate_2D_all, geometry_info
 def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                           U_param=True, C=None, E0=None, angle_option='lazero',
                                           box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
-                                          T_corrections=False,
+                                          gamma_plume=None, T_corrections=False,
                                           options_2D=['melt_m_ice_per_y','melt_m_we_per_y'],
                                           options_1D=['melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot',
                                                      'melt_we_per_y_avg','melt_Gt_per_y_tot'],
@@ -1575,6 +2054,8 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
         Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
     picop_opt : str
         Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
+    gamma_plume : float
+        Gamma to be used in the plume part of PICOP.
     T_corrections : Boolean
         If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
     options_2D : list of str
@@ -1597,7 +2078,7 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
         print('WELCOME! AS YOU WISH, I WILL COMPUTE MELT RATES FOR THE PARAMETERISATION "'+mparam+'" FOR '+str(len(nisf_list))+' ICE SHELVES')
     
     ds_2D = calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, U_param, C, E0, angle_option,
-                                           box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, T_corrections,
+                                           box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, gamma_plume, T_corrections,
                                            options_2D, verbose)
     
     ds_1D = calculate_melt_rate_1D_all_isf(nisf_list, ds_2D, geometry_info_2D, isf_stack_mask, options_1D, verbose)
@@ -1607,3 +2088,130 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
         print("I AM DONE! IT TOOK: "+str(round(timelength,2))+" seconds.")
         
     return ds_2D, ds_1D
+
+
+def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
+                                          U_param=True, C=None, E0=None, angle_option='lazero',
+                                          box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
+                                          gamma_plume=None, T_corrections=False,
+                                          tuning_mode=False,  
+                                          verbose=True):
+    
+    """
+    Function to process input information and call the 2D and 1D functions to compute melt rate variables.
+
+    Parameters
+    ----------
+    nisf_list : array of int
+        List containing the ice shelf IDs for all ice shelves of interest. 
+    T_S_profile : xarray.Dataset
+        Dataset containing temperature (in degrees C) and salinity (in psu) input profiles.
+    geometry_info_2D : xarray.Dataset
+        Dataset containing relevant 2D geometrical information.
+    geometry_info_1D : xarray.Dataset
+        Dataset containing relevant 1D geometrical information.
+    isf_stack_mask : xarray.DataArray
+        DataArray containing the stacked coordinates of the ice shelves (to make computing faster).
+    mparam : str
+        Parameterisation to be applied.
+    gamma : float
+        Gamma to be tuned.
+    U_param : Boolean
+        If ``True`` we use the complex parameterisation of U, if ``False``, this is "only" equal to (rho_sw * c_po) / (rho_i * L_i). Relevant for simple parameterisations only.
+    C : float
+        Circulation parameter C (Sv m3 kg-1 = m6 kg-1 s-1) in [0.1;9]*1.e6.
+    E0 : float
+        Entrainment coefficient.
+    angle_option : str
+        Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+    box_charac_2D : xarray.Dataset
+        Dataset containing relevant 2D box characteristics for all ice shelves.
+    box_charac_1D : xarray.Dataset
+        Dataset containing relevant 1D box characteristics for all ice shelves.
+    box_tot : int
+        Either the total number of boxes being used if box_tot_option='box_nb_tot' or the configuration to use if box_tot_option='nD_config'.
+    box_tot_option : str
+        Defines how ``box_tot``should be interpreted. Can be either 'box_nb_tot', then ``box_tot`` is the total number of boxes or 'nD_config', then ``box_tot`` is the configuration to use.
+    pism_version: str
+        Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
+    picop_opt : str
+        Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
+    gamma_plume : float
+        Gamma to be used in the plume part of PICOP.
+    T_corrections : Boolean
+        If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
+    tuning_mode : Boolean
+        If ``True``, only compute integrated melt.
+    verbose : Boolean
+        ``True`` if you want the program to keep you posted on where it is in the calculation.
+
+    Returns
+    -------
+    out_1D : xarray.Dataset
+        Containing the melt in Gt/yr for each ice shelf and the mean melt rate in m/yr i
+    """  
+    
+    if verbose:
+        time_start = time.time()
+        print('WELCOME! AS YOU WISH, I WILL COMPUTE THE EVALUATION METRICS FOR THE PARAMETERISATION "'+mparam+'" FOR '+str(len(nisf_list))+' ICE SHELVES')
+    
+    
+    if verbose:
+        list_loop = tqdm(nisf_list)
+    else:
+        list_loop = nisf_list
+
+    if box_charac_2D and box_charac_1D:
+        box_loc_config2 = box_charac_2D['box_location'].sel(box_nb_tot=box_charac_1D['nD_config'].sel(config=2))
+        box1 = box_loc_config2.where(box_loc_config2==1).isel(Nisf=0).drop('Nisf')
+    elif not box_charac_2D:
+        return print('You have not given me the 2D box characteristics! :( ')
+    elif not box_charac_1D:
+        return print('You have not given me the 1D box characteristics! :( ')
+
+    melt1D_Gt_per_yr_list = []
+    if not tuning_mode:
+        melt1D_myr_box1_list = []
+
+    for kisf in list_loop:
+        #print(kisf, n)
+
+        geometry_isf_2D = uf.choose_isf(geometry_info_2D,isf_stack_mask, kisf)
+
+        melt_rate_2D_isf = calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam,
+                                                       gamma, 
+                                                       U_param, C, E0, angle_option, 
+                                                       box_charac_2D, box_charac_1D, box_tot, box_tot_option, 
+                                                       pism_version, picop_opt, gamma_plume, T_corrections)
+
+        melt_rate_2D_isf_m_per_y = melt_rate_2D_isf * yearinsec
+        melt_rate_1D_isf_Gt_per_y = (melt_rate_2D_isf_m_per_y * geometry_isf_2D['grid_cell_area_weighted']).sum(dim=['mask_coord']) * rho_i / 10**12
+        if 'option' in melt_rate_1D_isf_Gt_per_y.coords:
+            melt_rate_1D_isf_Gt_per_y = melt_rate_1D_isf_Gt_per_y.drop('option')
+        melt1D_Gt_per_yr_list.append(melt_rate_1D_isf_Gt_per_y)
+        
+        if not tuning_mode:
+            box_loc_config_stacked = uf.choose_isf(box1, isf_stack_mask, kisf)
+            param_melt_2D_box1_isf = melt_rate_2D_isf_m_per_y.where(np.isfinite(box_loc_config_stacked))
+            melt_rate_1D_isf_myr_box1_mean = uf.weighted_mean(param_melt_2D_box1_isf,['mask_coord'], geometry_isf_2D['isfdraft_conc'])     
+            if 'option' in melt_rate_1D_isf_myr_box1_mean.coords:
+                melt_rate_1D_isf_myr_box1_mean = melt_rate_1D_isf_myr_box1_mean.drop('option')
+
+            melt1D_myr_box1_list.append(melt_rate_1D_isf_myr_box1_mean)
+
+    melt1D_Gt_per_yr = xr.concat(melt1D_Gt_per_yr_list, dim='Nisf')
+    if not tuning_mode:
+        melt1D_myr_box1 = xr.concat(melt1D_myr_box1_list, dim='Nisf')
+
+    melt1D_Gt_per_yr_ds = melt1D_Gt_per_yr.to_dataset(name='melt_1D_Gt_per_y')
+    if not tuning_mode:
+        melt1D_myr_box1_ds = melt1D_myr_box1.to_dataset(name='melt_1D_mean_myr_box1')
+        out_1D = xr.merge([melt1D_Gt_per_yr_ds, melt1D_myr_box1_ds])
+    else:
+        out_1D = melt1D_Gt_per_yr_ds
+        
+    if verbose:
+        timelength = time.time() - time_start
+        print("I AM DONE! IT TOOK: "+str(round(timelength,2))+" seconds.")
+    
+    return out_1D
