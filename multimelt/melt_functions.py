@@ -738,7 +738,7 @@ def plume_param(T_in, S_in, ice_draft_depth, zGL, alpha, gamma, E0, picop=False)
     else:
         Mterm = compute_Mterm(T_in, S_in, Tf, c_rho_1, c_tau, gamma, E0, alpha, thermal_forcing)
         
-    melt_rate = Mterm * M_hat
+    melt_rate = Mterm * M_hat * rho_sw/rho_i
     
     return melt_rate
 
@@ -787,7 +787,7 @@ def plume_param_modif(T_loc, S_loc, ice_draft_depth, deep_zGL, deep_alpha, alpha
     x_hat = compute_X_hat(ice_draft_depth, deep_zGL, T_gl, Tf_gl, E0, deep_alpha, c_tau, gamma)
     M_hat = compute_M_hat(x_hat)
     Mterm = compute_Mterm(T_loc, S_loc, Tf_loc, c_rho_1, c_tau, gamma, E0, alpha_loc, thermal_forcing_avg)
-    melt_rate = Mterm * M_hat
+    melt_rate = Mterm * M_hat * rho_sw/rho_i
 
     return melt_rate
 
@@ -891,7 +891,7 @@ def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max
     * ((gamma * E0 * np.sin(alpha_ups)) / (gamma + c_tau_ups + E0*np.sin(alpha_ups))) * thermal_forcing_ups) 
     
     ##### MELT RATE
-    melt_rate = M_hat * Mterm
+    melt_rate = M_hat * Mterm * rho_sw/rho_i
     
     return melt_rate.squeeze().load()#.drop('option')  
 
@@ -1396,9 +1396,9 @@ def calculate_melt_rate_2D_simple_1isf(kisf, T_S_profile, geometry_info_2D, geom
     S_avg = uf.weighted_mean(S0, ['mask_coord'], geometry_isf_2D['isfdraft_conc'])
     
     if U_param and 'mixed' in mparam0:
-        U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*f_coriolis)) * S_avg
+        U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*abs(f_coriolis))) * S_avg
     elif U_param and 'mixed' not in mparam0:
-        U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*f_coriolis)) * S0
+        U_factor = (c_po / L_i) * beta_coeff_lazero * (g/(2*abs(f_coriolis))) * S0
     else:
         U_factor = melt_factor
 
@@ -1925,7 +1925,7 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
         del melt_rate_2D_isf
         
     ds_melt_rate_2D_unstacked = uf.bring_back_to_2D(ds_melt_rate_2D_all)
-    ds_melt_rate_2D_unstacked = ds_melt_rate_2D_unstacked.reindex_like(geometry_info_2D['ISF_mask']).to_dataset(name='melt_m_ice_per_s')
+    ds_melt_rate_2D_unstacked = ds_melt_rate_2D_unstacked.chunk({'x': 1000, 'y': 1000}).reindex_like(geometry_info_2D['ISF_mask'].chunk({'x': 1000, 'y': 1000})).to_dataset(name='melt_m_ice_per_s')
 
     if 'melt_m_ice_per_y' in options_2D:
         ds_melt_rate_2D_unstacked['melt_m_ice_per_y'] = ds_melt_rate_2D_unstacked['melt_m_ice_per_s'] * yearinsec

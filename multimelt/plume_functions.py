@@ -478,6 +478,9 @@ def summarize_alpha_zGL_lazero(kisf, ds_isf_lazeroms, sn_isf, first_crit, second
         Mean depth of the grounding line in m at the plume origin for each point (negative downwards). 
     """
     
+    xx = plume_var_of_int.x
+    dx = xx[1] - xx[0]
+    
     # make a mean over all directions where 1st and 2nd criterion are valid
     ds_isf_lazeroms['gl_depth_mean'] = ds_isf_lazeroms['gl_depth'].where(first_crit & second_crit).mean('direction')
     # set nans within an ice shelf to local draft depth
@@ -488,7 +491,7 @@ def summarize_alpha_zGL_lazero(kisf, ds_isf_lazeroms, sn_isf, first_crit, second
     
     #avoid strong frontal slope    
     dIF_isf = plume_var_of_int['dIF'].where(plume_var_of_int['ISF_mask'] == kisf)
-    dIF_isf_corr = dIF_isf.where(dIF_isf/2500 < 1,1) #check again with Nico, if I understood it right (MIN to avoid strong frontal slope)
+    dIF_isf_corr = dIF_isf.where(dIF_isf/(abs(dx)/2) < 1,1) #check again with Nico, if I understood it right (MIN to avoid strong frontal slope)
 
     # for the alphas, same procedure, 2 criteria
     ds_isf_lazeroms['alphas_mean'] = np.arctan(sn_isf.where(first_crit & second_crit).mean('direction')) * dIF_isf_corr
@@ -573,7 +576,7 @@ def compute_alpha_appenB(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
     go_back_to_whole_grid_local_alpha: xr.DataArray
         Local slope angle in rad for each point.
     """
-    
+
     # cut out the ice shelf of interest
     draft_isf = ice_draft_neg.where(plume_var_of_int['ISF_mask'] == kisf, drop=True)
 
@@ -586,7 +589,7 @@ def compute_alpha_appenB(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
     yslope = check_slope_one_dimension(draft_isf, shiftedy_plus, shiftedy_minus, dy)
 
     dIF_isf = plume_var_of_int['dIF'].where(plume_var_of_int['ISF_mask'] == kisf)
-    dIF_isf_corr = dIF_isf.where(dIF_isf/2500 < 1,1) #check again with Nico, if I understood it right (MIN to avoid strong frontal slope)
+    dIF_isf_corr = dIF_isf.where(dIF_isf/(abs(dx)/2) < 1,1) #check again with Nico, if I understood it right (MIN to avoid strong frontal slope)
 
     local_alpha = np.arctan(np.sqrt(xslope ** 2 + yslope ** 2)) * dIF_isf_corr
 
@@ -697,17 +700,17 @@ def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int):
 
     # write to netcdf
     outfile = xr.Dataset(
-        {'zGL': (plume_var_of_int['zGL'].dims, plume_var_of_int['zGL']),
-         'alpha': (plume_var_of_int['alpha'].dims, plume_var_of_int['alpha'])
+        {'zGL': (plume_var_of_int['zGL'].dims, plume_var_of_int['zGL'].values),
+         'alpha': (plume_var_of_int['alpha'].dims, plume_var_of_int['alpha'].values)
          },
-        coords={'y': plume_var_of_int.y, 'x': plume_var_of_int.x, 'option': plume_param_options,
-                'latitude': plume_var_of_int['latitude'],
-                'longitude': plume_var_of_int['longitude']})
+        coords={'y': plume_var_of_int.y.values, 'x': plume_var_of_int.x.values, 'option': plume_param_options,
+                'latitude': (plume_var_of_int['latitude'].dims, plume_var_of_int['latitude'].values),
+                'longitude': (plume_var_of_int['longitude'].dims, plume_var_of_int['longitude'].values)})
 
     outfile['zGL'].attrs['standard_name'] = 'effective_grounding_line_depth'
     outfile['zGL'].attrs['long_name'] = 'Depth of possible grounding line points where plume starts'
     outfile['alpha'].attrs['standard_name'] = 'effective_slope_angle'
-    outfile['alpha'].attrs['long_name'] = 'Slope angle at the possible grounding line points where plume starts'
+    outfile['alpha'].attrs['long_name'] = 'Slope angle'
     outfile['option'].attrs['standard_name'] = 'zGL_alpha_compute_option'
     outfile['option'].attrs['long_name'] = 'Computation option for computing zGL and alpha'
 

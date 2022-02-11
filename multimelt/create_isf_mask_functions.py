@@ -8,9 +8,10 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from tqdm.notebook import tqdm, trange
-import multimelt.plume_functions as pf
-import multimelt.useful_functions as uf
-import multimelt.box_functions as bf
+#from tqdm import tqdm, trange
+import basal_melt_param.plume_functions as pf
+import basal_melt_param.useful_functions as uf
+import basal_melt_param.box_functions as bf
 
 def read_isfmask_info(infile):
     
@@ -199,9 +200,12 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy):
         xr_weights = xr.DataArray(data=weights_neighbors, dims=['y', 'x'])
 
         xr_corr_neighbors = mask_10.copy(data=pf.nd_corr(mask_10,xr_weights))
-
-        cut_gline = xr_corr_neighbors.where((new_mask>1) & (xr_corr_neighbors>0))
-        mask_gline = new_mask.where(cut_gline>0)
+        
+        mmask = (new_mask>1).astype(int) + (xr_corr_neighbors>0).astype(int)
+        cut_gline = xr_corr_neighbors.where(mmask==2)
+        mask_gline = new_mask.where(cut_gline>0)#.load()
+        #cut_gline = xr_corr_neighbors.where((new_mask>1) & (xr_corr_neighbors>0))
+        #mask_gline = new_mask.where(cut_gline>0).load()
         
         #################
         # fix the problems around Alexander Island (ice shelves with grounding line only on the island)
@@ -455,10 +459,12 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
         print('read in from netcdf')
         if not chunked:
             new_mask_file = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc')
-            new_mask = new_mask_file['ls_mask012']
+            #new_mask = new_mask_file['ls_mask012']
+            new_mask = new_mask_file['mask']
         else:
             new_mask = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc', chunks={'x': chunked, 'y': chunked})
-            new_mask = new_mask_file['ls_mask012']
+            #new_mask = new_mask_file['ls_mask012']
+            new_mask = new_mask_file['mask']
     
     
     ### Find out what grounded ice is on the main continent (2) and what is islands and pinning points (0)
@@ -474,10 +480,12 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
         print('read in from netcdf')
         if not chunked:
             mask_ground_file = xr.open_mfdataset(outputpath + 'mask_ground.nc')
-            mask_ground = mask_ground_file['ls_mask012']
+            #mask_ground = mask_ground_file['ls_mask012']
+            mask_ground = mask_ground_file['mask']
         else:
             mask_ground_file = xr.open_mfdataset(outputpath + 'mask_ground.nc', chunks={'x': chunked, 'y': chunked})
-            mask_ground = mask_ground_file['ls_mask012']
+            #mask_ground = mask_ground_file['ls_mask012']
+            mask_ground = mask_ground_file['mask']
 
     
     ### Define the grounding line
@@ -509,14 +517,20 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
         
     print('Merge into one netcdf')
 
-    outfile = xr.Dataset(
-                     {'ISF_mask': (new_mask.dims, new_mask),
-                     'GL_mask': (mask_gline.dims, mask_gline),
-                     'IF_mask': (mask_front.dims, mask_front),
-                     'PP_mask': (mask_pin2.dims, mask_pin2),
-                     'ground_mask': (mask_ground.dims, mask_ground),
-                     },
-                    coords = new_mask.coords)
+    outfile = new_mask.to_dataset(name='ISF_mask')
+    outfile['GL_mask'] = mask_gline
+    outfile['IF_mask'] = mask_front
+    outfile['PP_mask'] = mask_pin2
+    outfile['ground_mask'] = mask_ground
+    
+#    outfile = xr.Dataset(
+#                     {'ISF_mask': (new_mask.dims, new_mask.values),
+#                     'GL_mask': (mask_gline.dims, mask_gline.values),
+#                     'IF_mask': (mask_front.dims, mask_front.values),
+#                    'PP_mask': (mask_pin2.dims, mask_pin2.values),
+#                     'ground_mask': (mask_ground.dims, mask_ground.values),
+#                     },
+#                    coords = new_mask.coords)
 
     outfile['longitude'].attrs['standard_name'] = 'longitude'
     outfile['longitude'].attrs['units'] = 'degrees_east'
@@ -540,7 +554,7 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
     outfile.attrs['projection'] = 'Polar Stereographic South (71S,0E)'
     outfile.attrs['proj4'] = '+init=epsg:3031'
     outfile.attrs['Note'] = 'isf ID and individual isf characteristics can be found in ice_shelf_metadata_complete.csv'
-    return outfile, new_mask, mask_gline, mask_front
+    return outfile#, new_mask, mask_gline, mask_front
 
 def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
     
@@ -588,26 +602,31 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
                 is_area = np.nan
             ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
     arr_ismask_info = np.array(ismask_info)
-
+    
     df = pd.DataFrame(arr_ismask_info[:, 1:6], index=arr_ismask_info[:, 0].astype(int),
                       columns=['isf_name', 'region', 'isf_melt', 'melt_uncertainty',
                                'isf_area_rignot'])
     df['isf_melt'] = df['isf_melt'].astype(float)
     df['melt_uncertainty'] = df['melt_uncertainty'].astype(float)
     df['isf_area_rignot'] = df['isf_area_rignot'].astype(float)
-
+    
     ### Compute area from our data
     is_mask = new_mask.where(new_mask>1)
     
-    idx_da = xr.DataArray(data=df.index, dims=['Nisf']) 
-
-    df['isf_area_here'] = file_conc.where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
+    idx_da = xr.DataArray(data=df.index, dims=['Nisf']).chunk({'Nisf':1})
+    
+    df['isf_area_here'] = file_conc.chunk({'x':1000,'y':1000}).where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
+    
     
     ### Correct melt numbers using our area
     df1 = df.sort_index()
+    #print('here 1')
     df1['isf_melt'] = df1['isf_melt'] * df1['isf_area_here'] / df1['isf_area_rignot']
+    #print('here 2')
     df1['melt_uncertainty'] = df1['melt_uncertainty'] * df1['isf_area_here'] / df1['isf_area_rignot']
+    #print('here 3')
     df1['ratio_isf_areas'] = df1['isf_area_here'] / df1['isf_area_rignot']
+    #print('here 4')
     return df1
 
     
@@ -640,25 +659,30 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
     df1 : pd.DataFrame
         DataFrame containing the following columns for each ice shelf: columns=['isf_name', 'region', 'isf_melt', 'melt_uncertainty','isf_area_rignot'] AND ['front_bot_depth_max','front_bot_depth_avg','front_ice_depth_min','front_ice_depth_avg','front_min_lat','front_max_lat','front_min_lon','front_max_lon']
     """ 
-
+    
+    #print('here 6')
     file_draft = file_draft.where(file_draft<0,0)
     
-    idx_da = xr.DataArray(data=df1.index, dims=['Nisf']) 
+    idx_da = xr.DataArray(data=df1.index, dims=['Nisf']).chunk({'Nisf': 1})
     
-    df1['front_bot_depth_max'] = -1*file_bed.where(mask_front==idx_da).min(['x','y'])
-    df1['front_bot_depth_avg'] = -1*file_bed.where(mask_front==idx_da).mean(['x','y'])
-    df1['front_ice_depth_min'] = -1*file_draft.where(mask_front==idx_da).max(['x','y'])
-    df1['front_ice_depth_avg'] = -1*file_draft.where(mask_front==idx_da).mean(['x','y'])
-
-    df1['front_min_lat'] = lat.where(mask_front==idx_da).min(['x','y'])
-    df1['front_max_lat'] = lat.where(mask_front==idx_da).max(['x','y'])
-    df1['front_min_lon'] = lon.where(mask_front==idx_da).min(['x','y'])
-    df1['front_max_lon'] = lon.where(mask_front==idx_da).max(['x','y'])
+    #print('here 7')
+    df1['front_bot_depth_max'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).min(['x','y'])
+    df1['front_bot_depth_avg'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).mean(['x','y'])
+    df1['front_ice_depth_min'] = -1*file_draft.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).max(['x','y'])
+    df1['front_ice_depth_avg'] = -1*file_draft.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).mean(['x','y'])
     
+    #print('here 8')
+    df1['front_min_lat'] = lat.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).min(['x','y'])
+    df1['front_max_lat'] = lat.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).max(['x','y'])
+    df1['front_min_lon'] = lon.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).min(['x','y'])
+    df1['front_max_lon'] = lon.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).max(['x','y'])
+    
+    #print('here 9')
     # special treatment for Ross
     df1['front_max_lon'].loc[10] = lon.where(mask_front == 10).where(lon < -100).max()
     df1['front_min_lon'].loc[10] = lon.where(mask_front == 10).where(lon > 100).min()
     
+    #print('here 10')
     df_clean = df1[df1['isf_area_here'] > 0]
     
     return df_clean
@@ -862,7 +886,7 @@ def compute_distance_GL_IF_ISF(whole_ds):
     return whole_ds
 
 
-def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, ground_point, write_ismask = 'yes', write_groundmask = 'yes', dist=150, add_fac=100, write_metadata = 'yes'):
+def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, ground_point, write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', dist=150, add_fac=100, write_metadata = 'yes'):
     
     """
     Create mask and metadata file for all ice shelves. 
@@ -895,6 +919,8 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
         ``yes`` or ``no``. If ``yes``, compute the mask of the different ice shelves. If ``no``, read in the already existing file ``outputpath + 'preliminary_mask_file.nc'``.
     write_groundmask : str
         ``yes`` or ``no``. If ``yes``, compute the mask of mainland Antarctica. If ``no``, read in the already existing file ``outputpath + 'mask_ground.nc'``.
+    write_outfile : str
+        ``yes`` or ``no``. If ``yes``, go through the mask file. If ``no``, read in the already existing file ``outputpath + 'outfile.nc'``.
     dist : int
         Defines the size of the starting square for the ground mask - should be small if the resolution is coarse and high if the resolution is fine. Default is currently 150 but you can play around. A good indicator to see if it is too high is if you see the small upper tail of the Ross ice shelf or if it is masked as ground.
     add_fac : int
@@ -914,9 +940,14 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
     dy = yy[2] - yy[1]
     
     print('--------- PREPARE THE MASKS --------------')
-    outfile, new_mask, mask_gline, mask_front = create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, ground_point, write_ismask, write_groundmask, dist, add_fac)
+    if write_outfile == 'yes':
+        outfile = create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, ground_point, write_ismask, write_groundmask, dist, add_fac)
+        outfile.to_netcdf(outputpath + 'outfile.nc', 'w')
+    else:
+        outfile = xr.open_dataset(outputpath + 'outfile.nc')
+    
     print('--------- PREPARE THE METADATA --------------')
-    df1 = prepare_metadata(file_metadata, dx, dy, new_mask, mask_gline, mask_front, file_draft, file_bed, file_conc, outfile['longitude'], outfile['latitude'], outputpath, write_metadata)
+    df1 = prepare_metadata(file_metadata, dx, dy, outfile['ISF_mask'], outfile['GL_mask'], outfile['IF_mask'], file_draft, file_bed, file_conc, outfile['longitude'], outfile['latitude'], outputpath, write_metadata)
     print('--------- COMBINE MASK AND METADATA --------------')
     whole_ds = combine_mask_metadata(df1, outfile)
     print('--------- COMPUTE DISTANCE TO GROUNDING LINE AND ICE FRONT --------------')

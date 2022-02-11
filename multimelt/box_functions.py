@@ -116,7 +116,9 @@ def prepare_box_charac(kisf, isf_var_of_int, ice_draft, isf_conc, dx, dy, max_nb
         Dataset containing the following variables for the ice shelf of interest:``box_area``, ``box_depth_below_surface``, ``nD_config``
     """
     # ice_draft needs to be negative
-
+    
+    isf_var_of_int = isf_var_of_int.chunk({'x': 2000, 'y': 2000})
+    
     # cut out domain
     isf_area = isf_var_of_int.where(isf_var_of_int['ISF_mask'] == kisf).dropna('x', how='all').dropna('y', how='all')
     ice_draft = ice_draft.sel(x=isf_area.x, y=isf_area.y).where(isf_area['ISF_mask'] == kisf)
@@ -167,17 +169,17 @@ def prepare_box_charac(kisf, isf_var_of_int, ice_draft, isf_conc, dx, dy, max_nb
         nD = np.array([nD3, nD2, nD1])
         
         ds_2D = xr.Dataset(
-            {'dGL': (isf_area['dGL'].dims, isf_area['dGL']),
-             'dIF': (isf_area['dIF'].dims, isf_area['dIF']),
-             'box_location': (box_charac['box_location'].dims, box_charac['box_location'])
+            {'dGL': (isf_area['dGL'].dims, isf_area['dGL'].values),
+             'dIF': (isf_area['dIF'].dims, isf_area['dIF'].values),
+             'box_location': (box_charac['box_location'].dims, box_charac['box_location'].values)
          },
         coords={'y': isf_area.y, 'x': isf_area.x, 'box_nb_tot': range(1, max_nb_box + 1), 'box_nb': range(1, max_nb_box + 1),
                 'latitude': isf_area['latitude'],
                 'longitude': isf_area['longitude'], 'config': range(3, 0, -1)})
             
         ds_1D = xr.Dataset(
-            {'box_area': (box_charac['box_area_tot'].dims, box_charac['box_area_tot']),
-             'box_depth_below_surface': (box_charac['box_depth_below_surface'].dims, box_charac['box_depth_below_surface']),
+            {'box_area': (box_charac['box_area_tot'].dims, box_charac['box_area_tot'].values),
+             'box_depth_below_surface': (box_charac['box_depth_below_surface'].dims, box_charac['box_depth_below_surface'].values),
              'nD_config': (['config'], nD),
          },
         coords={'box_nb_tot': range(1, max_nb_box + 1), 'box_nb': range(1, max_nb_box + 1),'config': range(3, 0, -1)})
