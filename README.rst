@@ -1,5 +1,5 @@
-Multimelt
-=========
+Welcome to the documentation about the multimelt package!
+=========================================================
 
 .. start-badges
 
@@ -16,66 +16,35 @@ Multimelt
 
 .. end-badges
 
-.. arc3o documentation master file, created by
+.. multimelt documentation master file, created by
    sphinx-quickstart on Mon Aug 10 11:47:09 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-This is a package containing the most prominent parameterisations for the melt at the base of Antarctic ice shelves
 
-To use this package, clone the github repository locally and install it into you python/conda environment via <code>pip install .</code>
+Multimelt contains a large amount of existing basal melt parameterisations for Antarctic ice shelves. The functions are written as such that the main input needed are temperature and salinity profiles in front of the ice shelf, the rest happens in the functions.
+
+Also, multimelt contains functions to create masks of the Antarctic continent and the different ice shelves, and other geographical parameters on a circum-Antarctic scale, for input on a stereographic grid. 
+
+To use this package, clone the github repository locally and install it into you python/conda environment via pip install .
 
 It contains two example python notebooks:
 - prepare_mask_example.ipynb : a script using geometric circum-Antarctic input to produce masks of the ice shelves, and the needed box characteristics and plume characteristics
 - compute_melt_example.ipynb : a script showing how to apply the melting functions
 
-More detailed explanations and documentation coming soon...
+The documentation can be found here: https
+
 Don't hesitate to contact me if any questions arise: clara.burgard@univ-grenoble-alpes.fr
 
+How to cite multimelt
+---------------------
 
-ARC3O
-=====
-.. start-badges
+The detailed description of the application of the functions in multimelt is found in `Burgard et al., 2022`_ and should therefore, when used, be cited as follows:
 
-.. list-table::
-    :stub-columns: 1
-    :widths: 10 90
+Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P.: An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere Discuss. [preprint], https://doi.org/10.5194/tc-2022-32, in review, 2022. 
 
-    * - docs
-      - |docs|
 
-.. |docs| image:: http://readthedocs.org/projects/arc3o/badge/?version=latest
-    :alt: Documentation Status
-    :target: http://arc3o.readthedocs.io/en/latest/?badge=latest
+.. _`Burgard et al., 2022`: https://doi.org/10.5194/tc-2022-32
 
-.. end-badges
-
-.. arc3o documentation master file, created by
-   sphinx-quickstart on Mon Aug 10 11:47:09 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to the documentation about the Arctic Ocean Observation Operator!
-=========================================================================
-
-The Arctic Ocean Observation Operator (ARC3O) computes brightness temperatures at 6.9 GHz, 
-vertical polarization, based on climate model output. More information about the motivation, 
-structure and evaluation can be found in `Burgard et al., 2020a`_ and `Burgard et al., 2020b`_. 
-
-Currently, it is customized for output of the Max Planck Institute Earth System Model but can be 
-used for other models if the variable names are changed accordingly in the ARC3O functions.
-
-You can access the detailed documentation here: https://arc3o.readthedocs.io/
-
-How to cite ARC3O
------------------
-
-The detailed description and evaluation of ARC3O is found in `Burgard et al., 2020b`_ and should 
-therefore, when used, be cited as follows:
-
-Burgard, C., Notz, D., Pedersen, L. T., and Tonboe, R. T. (2020): "The Arctic Ocean Observation Operator for 6.9 GHz (ARC3O) – Part 2: Development and evaluation", *The Cryosphere*, 14, 2387–2407, https://doi.org/10.5194/tc-14-2387-2020.
-
-.. _`Burgard et al., 2020a`: https://tc.copernicus.org/articles/14/2369/2020/
-.. _`Burgard et al., 2020b`: https://tc.copernicus.org/articles/14/2387/2020/
 
 
