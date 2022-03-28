@@ -1,6 +1,7 @@
 name: multimelt
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - ipython
   - numpy
@@ -25,3 +26,4 @@ dependencies:
     - pybtex-docutils
     - pyyaml
     - sphinxcontrib-bibtex
+ - gsw
