@@ -1,0 +1,27 @@
+name: multimelt
+channels:
+  - defaults
+dependencies:
+  - ipython
+  - numpy
+  - pandas
+  - pip
+  - python>3.8
+  - sphinx
+  - sphinx_rtd_theme
+  - sphinxcontrib-applehelp
+  - sphinxcontrib-devhelp
+  - sphinxcontrib-htmlhelp
+  - sphinxcontrib-jsmath
+  - sphinxcontrib-qthelp
+  - sphinxcontrib-serializinghtml
+  - tqdm
+  - xarray
+  - pip:
+    - autodocsumm
+    - latexcodec
+    - pybtex
+    - pybtex-apa-style
+    - pybtex-docutils
+    - pyyaml
+    - sphinxcontrib-bibtex
