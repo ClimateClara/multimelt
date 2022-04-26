@@ -38,7 +38,7 @@ go to the repository folder and type:
 
 .. code-block:: bash
 
-  pip install -e . 
+  pip install . 
   
 If you want to modify it locally, you can fork the `multimelt git hub repository <github.com/ClimateClara/multimelt>`_, go to the repository folder and type:
   

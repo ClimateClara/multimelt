@@ -14,8 +14,14 @@ It takes input temperature and salinity profiles and returns several 2D and 1D m
 Authors
 -------
 
-| The multimelt code is based on physical formulations by :cite:`beckmann03`, :cite:`holland08`, :cite:`deconto16`,  :cite:`reese18`, :cite:`lazeroms18`, :cite:`lazeroms19`, :cite:`favier19`, :cite:`jourdain20`} and Fortran code by N. Jourdain.
-| This Fortran code has been translated and adapted to Python and further multimelt code has been developed by Clara Burgard - `ClimateClara <http://www.github.com/ClimateClara>`_.
+| The multimelt code is based on existing physical formulations:
+    - the linear fomulation as described by :cite:`beckmann03`
+    - the quadratic formulation as described by :cite:`holland08`, :cite:`deconto16`, :cite:`favier19` and :cite:`jourdain20`
+    - the plume parameterisation as described by :cite:`lazeroms18` and :cite:`lazeroms19`
+    - the box parameterisation (or PICO) as described by :cite:`reese18`
+    - the PICOP parameterisation as described py :cite:`pelle19`
+    
+| An existing Fortran code by N. Jourdain has been translated and adapted to Python and further multimelt code has been developed by Clara Burgard - `ClimateClara <http://www.github.com/ClimateClara>`_.
 
 License
 -------
