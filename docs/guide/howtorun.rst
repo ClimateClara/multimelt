@@ -3,6 +3,12 @@ How to run
 
 multimelt provides two types of "services". On the one hand, it can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). On the other hand, it computes 2D and 1D metrics related to basal melt of ice shelves.
 
+The procedure to create the masks and box and plume characteristics is shown in the notebook ``prepare_mask_example.ipynb``. The steps are also explained more in detail in :ref:`prod_masks`.
+
+The procedure to compute melt rates from temperature and salinity profiles is shown in the notebook ``compute_melt_example.ipynb``. The steps are also explained more in detail in :ref:`prod_melt`.
+
+.. _prod_masks:
+
 Producing masks
 ---------------
 
@@ -28,14 +34,10 @@ You can create an xr.Dataset containing the main geometric information with the 
 .. code-block:: python
 
     import xarray as xr
-    import numpy as np
-    from pyproj import Transformer
-    import pandas as pd
-    from tqdm.notebook import trange, tqdm
-    import multimelt.plume_functions as pf
-    import multimelt.box_functions as bf
-    import multimelt.useful_functions as uf
     import multimelt.create_isf_mask_functions as isfmf
+    
+    inputpath_metadata = './multimelt/mask_info/'
+    outputpath_mask = # path where you want to store your mask netcdf file
     
     file_bed_orig = # xr.DataArray containing the bathymetry (on grid EPSG:3031)
     file_draft = # xr.DataArray containing the actual ice draft depth (not smoothed out through a grid cell mean when the ice concentration is <1)
@@ -61,7 +63,7 @@ You can create an xr.Dataset containing the main geometric information with the 
 
     # Write to netcdf
     print('------- WRITE TO NETCDF -----------')
-    whole_ds.to_netcdf(outputpath_mask + 'nemo_5km_isf_masks_and_info_and_distance_new.nc','w')
+    whole_ds.to_netcdf(outputpath_mask + 'mask_file.nc','w')
 
 
 Output
@@ -91,10 +93,108 @@ The resulting netcdf file contains the following variables:
     * ``dIF``: Shortest distance to respective ice front [m]    
     * ``dGL_dIF``: Shortest distance to respective ice shelf front (only for grounding line points)
 
+Producing characteristics needed for box and plume parameterisation
+-------------------------------------------------------------------
+
+Input data
+^^^^^^^^^^
+
+The box and plume characteristics are inferred from the mask file ``'mask_file.nc'`` produced using :func:`multimelt.create_isf_mask_functions.create_mask_and_metadata_isf`. 
+
+.. code-block:: python
+
+    import xarray as xr
+
+    whole_ds = xr.open_dataset(outputpath_mask + 'mask_file.nc')
+
+In the NEMO case, we decide to focus on the ice shelves that are resolved enough on our grid, here the ones larger than 2500 km^2:
+
+.. code-block:: python
+
+    nonnan_Nisf = whole_ds['Nisf'].where(np.isfinite(whole_ds['front_bot_depth_max']), drop=True).astype(int)
+    file_isf_nonnan = whole_ds.sel(Nisf=nonnan_Nisf)
+    large_isf = file_isf_nonnan['Nisf'].where(file_isf_nonnan['isf_area_here'] >= 2500, drop=True) # only look at ice shelves with area larger than 2500 km2
+    file_isf = file_isf_nonnan.sel(Nisf=large_isf)
+
+Running (box characteristics)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    import xarray as xr
+    import multimelt.box_functions as bf
+
+    outputpath_boxes = # path where you want to store your box characteristics netcdf file
+
+    file_draft = # xr.DataArray containing the actual ice draft depth (not smoothed out through a grid cell mean when the ice concentration is <1)
+    file_isf_conc = # xr.DataArray containing the ice shelf concentration in each grid cell
 
 
-Producing masks
----------------
+    isf_var_of_int = file_isf[['ISF_mask', 'GL_mask', 'dGL', 'dIF', 'latitude', 'longitude', 'isf_name']]
+    out_2D, out_1D = bf.box_charac_file(file_isf['Nisf'], # ice shelf ID list
+                                        isf_var_of_int, # variables of interest from file_isf
+                                        -1*file_draft, # negative ice draft depth
+                                        file_isf_conc, # ice shelf concentration
+                                        outputpath_boxes, # output path for netcdfs
+                                        max_nb_box=10 # maximum amount of boxes to explore
+                                        )
+
+    print('------ WRITE TO NETCDF -------')
+    out_2D.to_netcdf(outputpath_boxes + 'boxes_2D.nc')
+    out_1D.to_netcdf(outputpath_boxes + 'boxes_1D.nc')
+
+Output (box characteristics)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The resulting netcdf file ``boxes_2D.nc`` contains the following variables:
+	* ``dGL``: map (on x and y) of shortest distance to respective grounding line [m]
+    * ``dIF``: map (on x and y) of shortest distance to respective ice front [m] 
+    * ``box_location``: map (on x and y) masking the location of box 1 to n, depending on the amount of boxes
+
+The resulting netcdf file ``boxes_1D.nc`` contains the following variables:
+    * ``box_area``: area of the respective box [m^2]
+	* ``box_depth_below_surface``: mean depth at the top of the box [m]
+    * ``nD_config``: amount of boxes that can be used in the config levels, according to the criteria that all boxes should have an area of more than 0 and that the box depth below surface has an ascending slope from grounding line to ice front. 
+
+Running (plume characteristics)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    import xarray as xr
+    import multimelt.plume_functions as pf
+
+    plume_param_options = ['simple','lazero', 'appenB'] 
+    # 'simple': deepest grounding line, cavity slope
+    # 'lazero': grounding line and slope inferred according to Lazeroms et al., 2018
+    # 'appenB': grounding line inferred according to Lazeroms et al., 2018 and local slope
+
+    plume_var_of_int = file_isf[['ISF_mask', 'GL_mask', 'IF_mask', 'dIF', 'dGL_dIF', 'latitude', 'longitude', 'front_ice_depth_avg']]
+
+    # Compute the ice draft
+    file_draft = # xr.DataArray containing the actual ice draft depth (not smoothed out through a grid cell mean when the ice concentration is <1)
+    ice_draft_pos = file_draft
+    ice_draft_neg = -1*ice_draft_pos
+
+    plume_charac = pf.prepare_plume_charac(plume_param_options, 
+                                            ice_draft_pos,
+                                            plume_var_of_int
+                                            )
+
+    print('------ WRITE TO NETCDF -------')
+    plume_charac.to_netcdf(outputpath_plumes+'plume_characteristics.nc') 
+
+Output (plume characteristics)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The resulting netcdf file ``plume_characteristics.nc`` contains the following variables:  
+	* ``zGL``: map (on x and y) of grounding line depth (negative downwards) associated to each ice shelf point [m]
+    * ``alpha``: map (on x and y) of slope associated to each ice shelf point
+    
+.. _prod_melt:
+
+Producing melt
+--------------
 
 To be continued...
 
