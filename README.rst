@@ -32,7 +32,7 @@ It contains two example python notebooks:
 - prepare_mask_example.ipynb : a script using geometric circum-Antarctic input to produce masks of the ice shelves, and the needed box characteristics and plume characteristics
 - compute_melt_example.ipynb : a script showing how to apply the melting functions
 
-The documentation can be found here: https
+The documentation can be found here: http://multimelt.readthedocs.io/
 
 Don't hesitate to contact me if any questions arise: clara.burgard@univ-grenoble-alpes.fr
 
