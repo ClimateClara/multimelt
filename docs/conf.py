@@ -39,7 +39,8 @@ extensions = [
 	'sphinxcontrib.bibtex'
 ]
 
-bibtex_bibfiles = './literature/references.bib'
+bibtex_bibfiles = ['./literature/references.bib']
+bibtex_encoding = 'latin'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

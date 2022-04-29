@@ -3,6 +3,5 @@ References
 
 .. bibliography:: references.bib
     :all:
-    :encoding: latin
-    :style: apa
+    :style: author_year 
     :keyprefix:
