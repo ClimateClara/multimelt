@@ -3,14 +3,14 @@
 How to install
 ==============
 
-Currently, the easiest is to clone the `multimelt git hub repository <github.com/ClimateClara/multimelt>`_,
+Currently, the easiest is to clone the `multimelt git hub repository <http://github.com/ClimateClara/multimelt>`_,
 go to the repository folder and type:
 
 .. code-block:: bash
 
   pip install . 
   
-If you want to modify it locally, you can fork the `multimelt git hub repository <github.com/ClimateClara/multimelt>`_, go to the repository folder and type:
+If you want to modify it locally, you can fork the `multimelt git hub repository <http://github.com/ClimateClara/multimelt>`_, go to the repository folder and type:
   
 .. code-block:: bash
 

@@ -41,6 +41,7 @@ extensions = [
 
 bibtex_bibfiles = ['./literature/references.bib']
 bibtex_encoding = 'latin'
+bibtex_default_style = 'unsrt'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
