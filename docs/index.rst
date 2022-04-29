@@ -29,8 +29,8 @@ Documentation
    :maxdepth: 2
    :caption: User's Guide:
 
-   guide/howtorun
-   guide/workflow
+   guide/prepare_masks
+   guide/compute_melt
    
 .. toctree::
    :maxdepth: 2

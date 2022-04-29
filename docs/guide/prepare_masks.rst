@@ -1,24 +1,29 @@
-How to run
-==========
+.. _prod_masks:
+
 
 multimelt provides two types of "services". On the one hand, it can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). On the other hand, it computes 2D and 1D metrics related to basal melt of ice shelves.
 
 The procedure to create the masks and box and plume characteristics is shown in the notebook ``prepare_mask_example.ipynb``. The steps are also explained more in detail in :ref:`prod_masks`.
 
-The procedure to compute melt rates from temperature and salinity profiles is shown in the notebook ``compute_melt_example.ipynb``. The steps are also explained more in detail in :ref:`prod_melt`.
+The procedure to compute melt rates from temperature and salinity profiles is shown in the notebook ``compute_melt_example.ipynb``. The steps are also explained more in detail in :ref:`prep_mask_general`, :ref:`prep_box_charac` and :ref:`prep_plume_charac`.
 
-.. _prod_masks:
 
-Producing masks
----------------
+How to run (1) : Preparing masks and geometric information
+==========================================================
+
+.. _prep_mask_general:
+
+Preparing masks to identify ice shelf and main ice shelf characteristics around Antarctica
+------------------------------------------------------------------------------------------
 
 Input data
 ^^^^^^^^^^
 
-Currently, the mask functions of ``multimelt`` are tailored for **circum-Antarctic** model output from NEMO, the Nucleus for European Modelling of the Ocean :cite:p:`nemo19`, interpolated to a south polar stereographic grid (EPSG:3031). However, it can be used for other models/grids if the variable names are changed accordingly either in the m functions or the model's output (requires a bit of digging).
+Currently, the mask functions of ``multimelt`` are tailored for **circum-Antarctic** model output from NEMO, the Nucleus for European Modelling of the Ocean :cite:p:`nemo19`, interpolated to a south polar stereographic grid (EPSG:3031). However, it can be used for other models/grids if the variable names are changed accordingly either in the functions or the model's output (requires a bit of digging).
 
 
 The mask function needs these geometric variables as input:
+    
 * ``file_msk``: file containing the circum-Antarctic information about basic masks with: 0 = ocean, 1 = ice shelves, 2 = grounded ice
 * ``file_bed_orig``: bathymetry [m], positive with depth
 * ``file_draft``: ice draft depth [m], positive with depth
@@ -72,6 +77,7 @@ Output
 ^^^^^^
 
 The resulting netcdf file contains the following variables:
+
 * ``ISF_mask``: a map (on x and y) masking the ice shelves (0 for grounded, 1 for ocean, isf ID for ice shelves)
 * ``GL_mask``: a map (on x and y) masking the grounding line of the ice shelves (isf ID for grounding line, NaN elsewhere)
 * ``IF_mask``: a map (on x and y) masking the ice front of the ice shelves (isf ID for ice front, NaN elsewhere)
@@ -95,8 +101,10 @@ The resulting netcdf file contains the following variables:
 * ``dIF``: Shortest distance to respective ice front [m]    
 * ``dGL_dIF``: Shortest distance to respective ice shelf front (only for grounding line points)
 
-Producing characteristics needed for box and plume parameterisation
--------------------------------------------------------------------
+.. _prep_box_charac:
+
+Preparing the box characteristics
+---------------------------------
 
 Input data
 ^^^^^^^^^^
@@ -118,8 +126,8 @@ In the NEMO case, we decide to focus on the ice shelves that are resolved enough
     large_isf = file_isf_nonnan['Nisf'].where(file_isf_nonnan['isf_area_here'] >= 2500, drop=True) # only look at ice shelves with area larger than 2500 km2
     file_isf = file_isf_nonnan.sel(Nisf=large_isf)
 
-Running (box characteristics)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Running
+^^^^^^^
 
 .. code-block:: python
 
@@ -145,21 +153,48 @@ Running (box characteristics)
     out_2D.to_netcdf(outputpath_boxes + 'boxes_2D.nc')
     out_1D.to_netcdf(outputpath_boxes + 'boxes_1D.nc')
 
-Output (box characteristics)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Output
+^^^^^^
 
 The resulting netcdf file ``boxes_2D.nc`` contains the following variables:
-	* ``dGL``: map (on x and y) of shortest distance to respective grounding line [m]
-    * ``dIF``: map (on x and y) of shortest distance to respective ice front [m] 
-    * ``box_location``: map (on x and y) masking the location of box 1 to n, depending on the amount of boxes
+
+* ``dGL``: map (on x and y) of shortest distance to respective grounding line [m]
+* ``dIF``: map (on x and y) of shortest distance to respective ice front [m] 
+* ``box_location``: map (on x and y) masking the location of box 1 to n, depending on the amount of boxes
 
 The resulting netcdf file ``boxes_1D.nc`` contains the following variables:
-    * ``box_area``: area of the respective box [m^2]
-	* ``box_depth_below_surface``: mean depth at the top of the box [m]
-    * ``nD_config``: amount of boxes that can be used in the config levels, according to the criteria that all boxes should have an area of more than 0 and that the box depth below surface has an ascending slope from grounding line to ice front. 
 
-Running (plume characteristics)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``box_area``: area of the respective box [m^2]
+* ``box_depth_below_surface``: mean depth at the top of the box [m]
+* ``nD_config``: amount of boxes that can be used in the config levels, according to the criteria that all boxes should have an area of more than 0 and that the box depth below surface has an ascending slope from grounding line to ice front. 
+
+.. _prep_plume_charac:
+
+Preparing the plume characteristics
+----------------------------------
+
+Input data
+^^^^^^^^^^
+
+The box and plume characteristics are inferred from the mask file ``'mask_file.nc'`` produced using :func:`multimelt.create_isf_mask_functions.create_mask_and_metadata_isf`. 
+
+.. code-block:: python
+
+    import xarray as xr
+
+    whole_ds = xr.open_dataset(outputpath_mask + 'mask_file.nc')
+
+In the NEMO case, we decide to focus on the ice shelves that are resolved enough on our grid, here the ones larger than 2500 km^2:
+
+.. code-block:: python
+
+    nonnan_Nisf = whole_ds['Nisf'].where(np.isfinite(whole_ds['front_bot_depth_max']), drop=True).astype(int)
+    file_isf_nonnan = whole_ds.sel(Nisf=nonnan_Nisf)
+    large_isf = file_isf_nonnan['Nisf'].where(file_isf_nonnan['isf_area_here'] >= 2500, drop=True) # only look at ice shelves with area larger than 2500 km2
+    file_isf = file_isf_nonnan.sel(Nisf=large_isf)
+
+Running
+^^^^^^^
 
 .. code-block:: python
 
@@ -186,34 +221,14 @@ Running (plume characteristics)
     print('------ WRITE TO NETCDF -------')
     plume_charac.to_netcdf(outputpath_plumes+'plume_characteristics.nc') 
 
-Output (plume characteristics)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The resulting netcdf file ``plume_characteristics.nc`` contains the following variables:  
-* ``zGL``: map (on x and y) of grounding line depth (negative downwards) associated to each ice shelf point [m]
-* ``alpha``: map (on x and y) of slope associated to each ice shelf point
-    
-.. _prod_melt:
-
-Producing melt
---------------
-
-The melt function is designed to receive information about the ice-shelf geometry and about temperature and salinity profiles in front of one or several ice shelves. The output is a range of 2D and 1D variables describing 
-
-Input data
-^^^^^^^^^^
-
-To be continued...
-
-Running
-^^^^^^^
-
-To be continued...
-
 Output
 ^^^^^^
 
-To be continued...
+The resulting netcdf file ``plume_characteristics.nc`` contains the following variables:  
+
+* ``zGL``: map (on x and y) of grounding line depth (negative downwards) associated to each ice shelf point [m]
+* ``alpha``: map (on x and y) of slope associated to each ice shelf point
+    
 
 
 
