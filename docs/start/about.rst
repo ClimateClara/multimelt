@@ -15,13 +15,20 @@ Authors
 -------
 
 | The multimelt code is based on existing physical formulations:
-    - the linear fomulation as described by :cite:`beckmann03`
-    - the quadratic formulation as described by :cite:`holland08`, :cite:`deconto16`, :cite:`favier19` and :cite:`jourdain20`
-    - the plume parameterisation as described by :cite:`lazeroms18` and :cite:`lazeroms19`
-    - the box parameterisation (or PICO) as described by :cite:`reese18`
-    - the PICOP parameterisation as described py :cite:`pelle19`
+
+* the linear fomulation as described by :cite:`beckmann03`
+* the quadratic formulation as described by :cite:`holland08`, :cite:`deconto16`, :cite:`favier19` and :cite:`jourdain20`
+* the plume parameterisation as described by :cite:`lazeroms18` and :cite:`lazeroms19`
+* the box parameterisation (or PICO) as described by :cite:`reese18`
+* the PICOP parameterisation as described py :cite:`pelle19`
     
 | An existing Fortran code by N. Jourdain has been translated and adapted to Python and further multimelt code has been developed by Clara Burgard - `ClimateClara <http://www.github.com/ClimateClara>`_.
+
+How to cite
+-------
+The detailed description of the application of the functions in multimelt is found in :cite:`burgard22` and should therefore, when used, be cited as follows:
+
+Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P.: An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere Discuss. [preprint], https://doi.org/10.5194/tc-2022-32, in review, 2022.
 
 License
 -------
