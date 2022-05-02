@@ -44,7 +44,7 @@ To compute the melt, in :func:`multimelt.melt_functions.calculate_melt_rate_1D_a
 
 *If you want to use the box or PICOP parameterisation*
 
- *> The variables contained in* ``'box_charac_file.nc'`` *created as shown in :ref:`prep_box_charac`*
+ *> The variables contained in* ``'box_charac_file.nc'`` *created as shown in* :ref:`prep_box_charac` 
 
 
 Running
@@ -174,5 +174,7 @@ To run the PICOP parameterisations, use the following command
 
 Output
 ^^^^^^
+
+Check out the documentation for the function: :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`
 
 To be continued...
