@@ -2061,7 +2061,7 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
     options_2D : list of str
         2D variables to be written out. Possible options: 'melt_m_ice_per_y','melt_m_we_per_y'. 'melt_m_ice_per_s' is always written out!
     options_1D : list of str
-        1D variables to be written out. Possible options: 'melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot'. 'melt_m_ice_per_y_tot' is always written out!
+        1D variables to be written out. Possible options: 'melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot', 'melt_Gt_per_y_tot'. 'melt_m_ice_per_y_tot' is always written out!
     verbose : Boolean
         ``True`` if you want the program to keep you posted on where it is in the calculation.
 
@@ -2098,7 +2098,7 @@ def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_inf
                                           verbose=True):
     
     """
-    Function to process input information and call the 2D and 1D functions to compute melt rate variables.
+    Function to process input information and call the 2D and 1D functions to compute only the evaluation variables: melt in Gt per yr and melt near the grounding line in m ice per yr.
 
     Parameters
     ----------

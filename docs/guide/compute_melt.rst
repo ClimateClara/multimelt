@@ -175,6 +175,16 @@ To run the PICOP parameterisations, use the following command
 Output
 ^^^^^^
 
-Check out the documentation for the function: :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`
+The xr.Dataset ``ds_2D`` contains the following variables on a map (2D):
 
-To be continued...
+* ``melt_m_ice_per_s``: melt rate in m ice per second
+* ``melt_m_ice_per_y``: melt rate in m ice per year (computed per default but can also be removed by re-defining the list ``options_2D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+* ``melt_m_we_per_y``: melt rate in m water equivalent per year (computed per default but can also be removed by re-defining the list ``options_2D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+
+The xr.Dataset ``ds_1D`` contains the following integrated variables (1D):
+* ``melt_m_ice_per_y_tot``: total (accumulated) melt over each ice shelf in m ice per year
+* ``melt_m_ice_per_y_avg``: average melt for each ice shelf in m ice per year (computed per default but can also be removed by re-defining the list ``options_1D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+* ``melt_m_ice_per_y_min``: minimum melt for each ice shelf in m ice per year (computed per default but can also be removed by re-defining the list ``options_1D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+* ``melt_m_ice_per_y_max``: maximum melt for each ice shelf in m ice per year (computed per default but can also be removed by re-defining the list ``options_1D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+* ``melt_we_per_y_tot``: total (accumulated) melt over each ice shelf in m water equivalent per year (computed per default but can also be removed by re-defining the list ``options_1D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
+* ``melt_Gt_per_y_tot``: total melt over each ice shelf in Gt per year (computed per default but can also be removed by re-defining the list ``options_1D`` given to :func:`multimelt.melt_functions.calculate_melt_rate_1D_and_2D_all_isf`)
