@@ -726,7 +726,7 @@ def plume_param(T_in, S_in, ice_draft_depth, zGL, alpha, gamma, E0, picop=False)
     if picop:
         x_hat = compute_X_hat_picop(T_in, Tf, ice_draft_depth, zGL, stanton_number, E0, alpha)
     else:
-        x_hat = compute_X_hat(ice_draft_depth,zGL,T_in,Tf,E0,alpha,c_tau,gamma)
+        x_hat = compute_X_hat(ice_draft_depth,zGL,T_in,Tf,E0,c_tau,alpha,gamma)
     
     if picop:
         M_hat = compute_M_hat_picop(x_hat)
@@ -784,7 +784,7 @@ def plume_param_modif(T_loc, S_loc, ice_draft_depth, deep_zGL, deep_alpha, alpha
     Tf_loc = freezing_temperature(S_loc, ice_draft_depth)
 
     c_rho_1, c_rho_2, c_tau = compute_c_rho_tau(gamma, S_loc)
-    x_hat = compute_X_hat(ice_draft_depth, deep_zGL, T_gl, Tf_gl, E0, deep_alpha, c_tau, gamma)
+    x_hat = compute_X_hat(ice_draft_depth, deep_zGL, T_gl, Tf_gl, E0, c_tau, deep_alpha, gamma)
     M_hat = compute_M_hat(x_hat)
     Mterm = compute_Mterm(T_loc, S_loc, Tf_loc, c_rho_1, c_tau, gamma, E0, alpha_loc, thermal_forcing_avg)
     melt_rate = Mterm * M_hat * rho_sw/rho_i
@@ -2061,7 +2061,7 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
     options_2D : list of str
         2D variables to be written out. Possible options: 'melt_m_ice_per_y','melt_m_we_per_y'. 'melt_m_ice_per_s' is always written out!
     options_1D : list of str
-        1D variables to be written out. Possible options: 'melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot', 'melt_Gt_per_y_tot'. 'melt_m_ice_per_y_tot' is always written out!
+        1D variables to be written out. Possible options: 'melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot'. 'melt_m_ice_per_y_tot' is always written out!
     verbose : Boolean
         ``True`` if you want the program to keep you posted on where it is in the calculation.
 
@@ -2098,7 +2098,7 @@ def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_inf
                                           verbose=True):
     
     """
-    Function to process input information and call the 2D and 1D functions to compute only the evaluation variables: melt in Gt per yr and melt near the grounding line in m ice per yr.
+    Function to process input information and call the 2D and 1D functions to compute melt rate variables.
 
     Parameters
     ----------

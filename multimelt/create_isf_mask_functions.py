@@ -53,7 +53,7 @@ def read_isfmask_info(infile):
     return res
 
 
-def def_isf_mask(arr_def_ismask, file_msk, lon, lat):
+def def_isf_mask(arr_def_ismask, file_msk, lon, lat, FRIS_one=True):
     
     """
     Define a mask for the individual ice shelves. 
@@ -90,6 +90,9 @@ def def_isf_mask(arr_def_ismask, file_msk, lon, lat):
         #print('detail ' + str(i))
         isf_mask = isf_mask.where(~(uf.in_range(lon, mm[0:2]) & uf.in_range(lat, mm[2:4])), int(mm[4]))
     isf_mask = isf_mask.where(isf_yes)
+    
+    if FRIS_one:
+        isf_mask = isf_mask.where(isf_mask != 21, 11) # Filchner (21) and Ronne (11) are combined
     
     new_mask = isf_mask.where(file_msk != 0, 1).where(file_msk != 2, 0)
     
@@ -373,7 +376,7 @@ def def_pinning_point_boundaries(mask_pin, new_mask):
 #outfile.to_netcdf(outputpath+'all_masks.nc','w')
 
 
-def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, ground_point='yes', write_ismask = 'yes', write_groundmask = 'yes', dist=150, add_fac=100):
+def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one=True, ground_point='yes', write_ismask = 'yes', write_groundmask = 'yes', dist=150, add_fac=100):
 
     """
     Identify the location of ice shelves, Antarctic mainland, grounding lines, ice fronts and pinning points. 
@@ -400,6 +403,8 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
         Grid size in x direction, step from left to right (can be positive or negative depending on the initial coordinate).
     dy : float
         Grid size in x direction, step from left to right (can be positive or negative depending on the initial coordinate).
+    FRIS_one : boolean
+        True if Filchner-Ronne should be treated as one ice shelf, False if Filchner and Ronne should be separated.
     ground_point : str
         ``yes`` or ``no``. If ``yes``, the grounding line is defined on the ground points at the border to the ice shelf. If ``no``, the grounding line is defined on the ice shelf points at the border to the ground.
     write_ismask : str
@@ -453,7 +458,7 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
     print('Define the regional masks')
 
     if write_ismask == 'yes':
-        new_mask = def_isf_mask(arr_def_ismask, file_msk, lon, lat)
+        new_mask = def_isf_mask(arr_def_ismask, file_msk, lon, lat, FRIS_one)
         new_mask.to_netcdf(outputpath + 'preliminary_mask_file.nc', 'w')
     else:
         print('read in from netcdf')
@@ -556,7 +561,7 @@ def create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath
     outfile.attrs['Note'] = 'isf ID and individual isf characteristics can be found in ice_shelf_metadata_complete.csv'
     return outfile#, new_mask, mask_gline, mask_front
 
-def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
+def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy, new_mask, FRIS_one):
     
     """
     Prepare the metadata info (ice shelf names and observed melt rates). 
@@ -567,6 +572,8 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
     ----------
     file_metadata : str
         Path to ``iceshelves_metadata_Nico.txt``
+    file_metadata_GL_flux : str
+        Path to ``GL_flux_rignot13.csv``
     file_conc : float between 0 and 1
         Concentration of ice shelf in each grid cell
     dx : float
@@ -575,6 +582,8 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
         Grid spacing in the y-direction
     new_mask : xr.DataArray
         Array showing the coverage of each ice shelf with the respective ID, open ocean is 1, land is 0.
+    FRIS_one : boolean
+        True if Filchner-Ronne should be treated as one ice shelf, False if Filchner and Ronne should be separated.
 
     Returns
     -------
@@ -600,7 +609,9 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
                 is_area = float(ll[148:155])
             if is_area == 1.:
                 is_area = np.nan
+                
             ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+            
     arr_ismask_info = np.array(ismask_info)
     
     df = pd.DataFrame(arr_ismask_info[:, 1:6], index=arr_ismask_info[:, 0].astype(int),
@@ -609,6 +620,15 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
     df['isf_melt'] = df['isf_melt'].astype(float)
     df['melt_uncertainty'] = df['melt_uncertainty'].astype(float)
     df['isf_area_rignot'] = df['isf_area_rignot'].astype(float)
+    
+    if FRIS_one:
+        
+        df['isf_name'].loc[11] = 'Filchner-Ronne'
+        df['isf_melt'].loc[11] = df['isf_melt'].loc[11] + df['isf_melt'].loc[21]
+        df['melt_uncertainty'].loc[11] = df['melt_uncertainty'].loc[11] + df['melt_uncertainty'].loc[21] # this might be a bit dodgy to add the uncertainties?
+        df['isf_area_rignot'].loc[11] = df['isf_area_rignot'].loc[11] + df['isf_area_rignot'].loc[21] 
+        df = df.drop(21)
+        
     
     ### Compute area from our data
     is_mask = new_mask.where(new_mask>1)
@@ -627,6 +647,15 @@ def prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask):
     #print('here 3')
     df1['ratio_isf_areas'] = df1['isf_area_here'] / df1['isf_area_rignot']
     #print('here 4')
+    
+    # add grounding line flux as given by Rignot et al 2013
+    GL_flux_pd = pd.read_csv(file_metadata_GL_flux, delimiter=';').dropna(how='all',axis=1).dropna(how='any',axis=0)
+    df1['GL_flux'] = np.nan
+    for idx_gl in GL_flux_pd.index:
+        for idx in df1.index:
+            if df1['isf_name'].loc[idx] == GL_flux_pd['Ice Shelf Name'].loc[idx_gl]:
+                df1['GL_flux'].loc[idx] = float(GL_flux_pd['Grounding line flux'].loc[idx_gl])
+    
     return df1
 
     
@@ -687,7 +716,7 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
     
     return df_clean
     
-def prepare_metadata(file_metadata, dx, dy, new_mask, mask_gline, mask_front, file_draft, file_bed, file_conc, lon, lat, outputpath, write_metadata = 'yes'):
+def prepare_metadata(file_metadata, file_metadata_GL_flux, dx, dy, new_mask, mask_gline, mask_front, file_draft, file_bed, file_conc, lon, lat, outputpath, write_metadata = 'yes', FRIS_one=True):
 
     """
     Prepare the metadata info into a csv. 
@@ -698,6 +727,8 @@ def prepare_metadata(file_metadata, dx, dy, new_mask, mask_gline, mask_front, fi
     ----------
     file_metadata : str
         Path to ``iceshelves_metadata_Nico.txt``
+    file_metadata_GL_flux : str
+        Path to ``GL_flux_rignot13.csv``
     dx : float
         Grid spacing in the x-direction
     dy : float
@@ -722,6 +753,8 @@ def prepare_metadata(file_metadata, dx, dy, new_mask, mask_gline, mask_front, fi
         Path where the metadata csv-file should be written to.
     write_metadata : str
         ``yes`` or ``no``. If ``yes``, prepare the metadata csv-file. If ``no``, read in the already existing file ``outputpath + 'ice_shelf_metadata_complete.csv'``.
+    FRIS_one : boolean
+        True if Filchner-Ronne should be treated as one ice shelf, False if Filchner and Ronne should be separated.
         
     Returns
     -------
@@ -737,7 +770,7 @@ def prepare_metadata(file_metadata, dx, dy, new_mask, mask_gline, mask_front, fi
 
     ### Name, Area, Numbers from Rignot et al. 2013
     if write_metadata == 'yes':
-        df1 = prepare_csv_metadata(file_metadata, file_conc, dx, dy, new_mask) 
+        df1 = prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy, new_mask, FRIS_one) 
         df1 = compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1, lon, lat)
         df1.to_csv(outputpath + "ice_shelf_metadata_complete.csv")
     else:
@@ -786,6 +819,9 @@ def combine_mask_metadata(df1, outfile):
     whole_ds['ratio_isf_areas'].attrs['standard_name'] = 'ratio isf area here/Rignot'
     whole_ds['ratio_isf_areas'].attrs['units'] = '-'
     whole_ds['ratio_isf_areas'].attrs['long_name'] = 'Ratio between ice shelf area computed from our mask and area from Rignot et al 2013'
+    whole_ds['GL_flux'].attrs['standard_name'] = 'grounding_line_flux'
+    whole_ds['GL_flux'].attrs['units'] = 'Gt/yr'
+    whole_ds['GL_flux'].attrs['long_name'] = 'Flux across grounding line from Rignot et al 2013'
     whole_ds['front_bot_depth_max'].attrs['standard_name'] = 'max depth between isf front and ocean bottom'
     whole_ds['front_bot_depth_max'].attrs['units'] = 'm'
     whole_ds['front_bot_depth_max'].attrs['long_name'] = 'Maximum depth between the ice shelf front and ocean bottom'
@@ -886,7 +922,7 @@ def compute_distance_GL_IF_ISF(whole_ds):
     return whole_ds
 
 
-def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, ground_point, write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', dist=150, add_fac=100, write_metadata = 'yes'):
+def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, file_metadata_GL_flux, ground_point, FRIS_one=True, write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', dist=150, add_fac=100, write_metadata = 'yes'):
     
     """
     Create mask and metadata file for all ice shelves. 
@@ -913,8 +949,12 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
         Path where the intermediate files should be written to.
     file_metadata : str
         Path to ``iceshelves_metadata_Nico.txt``
+    file_metadata_GL_flux : str
+        Path to ``GL_flux_rignot13.csv``
     ground_point : str
         ``yes`` or ``no``. If ``yes``, the grounding line is defined on the ground points at the border to the ice shelf. If ``no``, the grounding line is defined on the ice shelf points at the border to the ground.
+    FRIS_one : boolean
+        True if Filchner-Ronne should be treated as one ice shelf, False if Filchner and Ronne should be separated.
     write_ismask : str
         ``yes`` or ``no``. If ``yes``, compute the mask of the different ice shelves. If ``no``, read in the already existing file ``outputpath + 'preliminary_mask_file.nc'``.
     write_groundmask : str
@@ -941,13 +981,13 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
     
     print('--------- PREPARE THE MASKS --------------')
     if write_outfile == 'yes':
-        outfile = create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, ground_point, write_ismask, write_groundmask, dist, add_fac)
+        outfile = create_isf_masks(file_map, file_msk, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, ground_point, write_ismask, write_groundmask, dist, add_fac)
         outfile.to_netcdf(outputpath + 'outfile.nc', 'w')
     else:
         outfile = xr.open_dataset(outputpath + 'outfile.nc')
     
     print('--------- PREPARE THE METADATA --------------')
-    df1 = prepare_metadata(file_metadata, dx, dy, outfile['ISF_mask'], outfile['GL_mask'], outfile['IF_mask'], file_draft, file_bed, file_conc, outfile['longitude'], outfile['latitude'], outputpath, write_metadata)
+    df1 = prepare_metadata(file_metadata, file_metadata_GL_flux, dx, dy, outfile['ISF_mask'], outfile['GL_mask'], outfile['IF_mask'], file_draft, file_bed, file_conc, outfile['longitude'], outfile['latitude'], outputpath, write_metadata, FRIS_one)
     print('--------- COMBINE MASK AND METADATA --------------')
     whole_ds = combine_mask_metadata(df1, outfile)
     print('--------- COMPUTE DISTANCE TO GROUNDING LINE AND ICE FRONT --------------')
