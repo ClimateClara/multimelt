@@ -72,7 +72,9 @@ setuptools.setup(
           'tqdm',
           'scipy',
           'gsw',
-          'pyproj'
+          'pyproj',
+          'dask',
+          'itertools'
       ],
 
 )

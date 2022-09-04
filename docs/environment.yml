@@ -27,3 +27,5 @@ dependencies:
     - pyyaml
     - sphinxcontrib-bibtex
   - gsw
+  - dask
+  - itertools
