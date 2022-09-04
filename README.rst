@@ -32,9 +32,11 @@ To use this package, clone the github repository locally and install it into you
     
     pip install .
 
-It contains two example python notebooks:
+It contains four example python notebooks:
 
 * ``prepare_mask_example.ipynb`` : a script using geometric circum-Antarctic input to produce masks of the ice shelves, and the needed box characteristics and plume characteristics
+* ``conversion_CTtoPT_SAtoSP.ipynb`` : a script to convert 3D fields of conservative temperature to potential temperature and 3D fields of absolute salinity to practical salinity
+* ``T_S_profiles_per_ice_shelf.ipynb`` : a script to created averaged temperature and salinity profiles in front of the different ice shelves
 * ``compute_melt_example.ipynb`` : a script showing how to apply the melting functions
 
 
