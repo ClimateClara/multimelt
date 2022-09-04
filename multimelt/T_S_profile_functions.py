@@ -9,7 +9,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 import gsw
 import itertools
-import multimelt.useful_functions as uf
+import basal_melt_param.useful_functions as uf
 
 def cut_out_contshelf_offshore(input_fld, mask_ocean, offshore, contshelf):
     
@@ -271,3 +271,49 @@ def create_filepath(ds, prefix, outputpath, year):
     """
     filepath = f'{outputpath}{prefix}_{year}.nc'
     return filepath
+
+def distance_isf_points_from_line_small_domain(isf_points_da,line_points_da):
+    
+    """
+    Compute the distance between ice shelf points and a line.
+    
+    This function computes the distance between ice shelf points and a line. This line can be the grounding
+    line or the ice shelf front.
+    
+    Parameters
+    ----------
+    whole_domain : xarray.DataArray
+        ice-shelf mask - all ice shelves are represented by a number, all other points (ocean, land) set to nan
+    isf_points_da : xarray.DataArray
+        array containing only points from one ice shelf
+    line_points_da : xarray.DataArray
+        mask representing the grounding line or ice shelf front mask corresponding to the ice shelf selected in ``isf_points_da``
+        
+    Returns
+    -------
+    xr_dist_to_line : xarray.DataArray
+        distance of the each ice shelf point to the given line of interest
+    """
+    
+    # add a common dimension 'grid' along which to stack
+    stacked_isf_points = isf_points_da.stack(grid=['y', 'x'])
+    stacked_line = line_points_da.stack(grid=['y', 'x'])
+    
+    # remove nans
+    filtered_isf_points = stacked_isf_points[stacked_isf_points>0]
+    filtered_line = stacked_line[stacked_line>0]
+
+    # write out the y,x pairs behind the dimension 'grid'
+    grid_isf_points = filtered_isf_points.indexes['grid'].to_frame().values.astype(float)
+    grid_line = filtered_line.indexes['grid'].to_frame().values.astype(float)
+    
+    # create tree to line and compute distance
+    tree_line = cKDTree(grid_line)
+    dist_yx_to_line, _ = tree_line.query(grid_isf_points)
+        
+    # add the coordinates of the previous variables
+    xr_dist_to_line = filtered_isf_points.copy(data=dist_yx_to_line)
+    # put 1D array back into the format of the grid and put away the 'grid' dimension
+    xr_dist_to_line = xr_dist_to_line.unstack('grid')
+    
+    return xr_dist_to_line
