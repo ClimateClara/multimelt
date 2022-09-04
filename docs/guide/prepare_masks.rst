@@ -1,9 +1,11 @@
 .. _prod_masks:
 
 
-multimelt provides two types of "services". On the one hand, it can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). On the other hand, it computes 2D and 1D metrics related to basal melt of ice shelves.
+multimelt provides three types of "services". (1)It can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). (2) It computes mean profiles of temperature and salinity in front of the ice shelves in given domains of interest. (3) It computes 2D and 1D metrics related to basal melt of ice shelves.
 
 The procedure to create the masks and box and plume characteristics is shown in the notebook ``prepare_mask_example.ipynb``. The steps are also explained more in detail in :ref:`prep_mask_general`, :ref:`prep_box_charac` and :ref:`prep_plume_charac`.
+
+The procedure to compute and format the input temperature (T) and salinity (S) profiles from 2D fields is shown in the notebook ``T_S_profiles_per_ice_shelf.ipynb``. The steps are also explained more in detail in :ref:`prepare_prof`. !BE CAREFUL! If your 2D fields are in conservative temperature and absolute salinity, do not forget to convert them with the script ``conversion_CTtoPT_SAtoSP.ipynb``.
 
 The procedure to compute melt rates from temperature and salinity profiles is shown in the notebook ``compute_melt_example.ipynb``. The steps are also explained more in detail in :ref:`prod_melt`.
 
@@ -30,6 +32,7 @@ The mask function needs these geometric variables as input:
 * ``file_isf_conc``: ice shelf concentration (if some grid cells are not fully covered with ice)
 * ``latlon_boundaries``: the latitude/longitude boundaries of the ice shelves, as defined for example in './mask_info/lonlat_masks.txt'
 * ``isf_metadata``: ice shelf name corresponding to ID in file above and data from :cite:t:`rignot13` about the different ice shelves, as shown in './mask_info/iceshelves_metadata_Nico.txt'
+* ``file_metadata_GL_flux``: flux across grounding line from :cite:t:`rignot13`, as shown in './mask_info/GL_flux_rignot13.csv'
 
 Running
 ^^^^^^^

@@ -1,15 +1,17 @@
 .. _prod_melt:
 
-multimelt provides two types of "services". On the one hand, it can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). On the other hand, it computes 2D and 1D metrics related to basal melt of ice shelves.
+multimelt provides three types of "services". (1)It can produce masks of the different circum-Antarctic ice shelves and geometric properties on each ice shelf level (neede for the pdifferent parameterisations). (2) It computes mean profiles of temperature and salinity in front of the ice shelves in given domains of interest. (3) It computes 2D and 1D metrics related to basal melt of ice shelves.
 
 The procedure to create the masks and box and plume characteristics is shown in the notebook ``prepare_mask_example.ipynb``. The steps are also explained more in detail in :ref:`prep_mask_general`, :ref:`prep_box_charac` and :ref:`prep_plume_charac`.
 
+The procedure to compute and format the input temperature (T) and salinity (S) profiles from 2D fields is shown in the notebook ``T_S_profiles_per_ice_shelf.ipynb``. The steps are also explained more in detail in :ref:`prepare_prof`. !BE CAREFUL! If your 2D fields are in conservative temperature and absolute salinity, do not forget to convert them with the script ``conversion_CTtoPT_SAtoSP.ipynb``.
+
 The procedure to compute melt rates from temperature and salinity profiles is shown in the notebook ``compute_melt_example.ipynb``. The steps are also explained more in detail in :ref:`prod_melt`.
 
-How to run (2) : Computing basal melt rates
+How to run (3) : Computing basal melt rates
 ===========================================
 
-The melt function is designed to receive information about the ice-shelf geometry (formatted with :func:`multimelt.create_isf_mask_functions.create_mask_and_metadata_isf`, :func:`multimelt.plume_functions.prepare_plume_charac`, and :func:`multimelt.box_functions.box_charac_file`),  and about temperature and salinity profiles in front of one or several ice shelves. The output is a range of 2D and 1D variables describing the melt rates at the base of the ice shelf or ice shelves, if you have several. 
+The melt function is designed to receive information about the ice-shelf geometry (formatted with :func:`multimelt.create_isf_mask_functions.create_mask_and_metadata_isf`, :func:`multimelt.plume_functions.prepare_plume_charac`, and :func:`multimelt.box_functions.box_charac_file`),  and about temperature and salinity profiles in front of one or several ice shelves (formatted in ``T_S_profiles_per_ice_shelf.ipynb``). The output is a range of 2D and 1D variables describing the melt rates at the base of the ice shelf or ice shelves, if you have several. 
 
 Input data
 ^^^^^^^^^^
