@@ -30,6 +30,7 @@ Documentation
    :caption: User's Guide:
 
    guide/prepare_masks
+   guide/prepare_input_T_S_profiles
    guide/compute_melt
    
 .. toctree::
