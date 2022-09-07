@@ -25,8 +25,6 @@ box_functions
    	:undoc-members:
    	:show-inheritance:
 
-.. _memls_api:
-
 constants
 ---------
 

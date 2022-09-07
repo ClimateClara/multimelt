@@ -73,8 +73,7 @@ setuptools.setup(
           'scipy',
           'gsw',
           'pyproj',
-          'dask',
-          'itertools'
+          'dask'
       ],
 
 )
