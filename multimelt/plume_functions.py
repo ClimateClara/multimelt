@@ -203,7 +203,7 @@ def prepare_plume_dataset(plume_var_of_int,plume_param_options):
     plume_var_of_int : xr.DataArray or xr.Dataset
         Dataset or DataArray representing the domain.
     plume_param_options : list of str
-        Parametrization options (typically 'simple', 'lazero' and 'appenB').
+        Parametrization options (typically 'cavity', 'lazero' and 'local').
 
     Returns
     -------
@@ -218,10 +218,10 @@ def prepare_plume_dataset(plume_var_of_int,plume_param_options):
                                            coords={'y': plume_var_of_int.y, 'x': plume_var_of_int.x, 'option': plume_param_options})
     return plume_var_of_int
 
-def compute_alpha_simple(plume_var_of_int):
+def compute_alpha_cavity(plume_var_of_int):
 
     """
-    Compute alpha with a very simple approach (angle between horizontal and ice front).
+    Compute alpha with a very simple approach (angle between horizontal and ice front) => cavity slope
         
     Parameters
     ----------
@@ -553,7 +553,7 @@ def compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
     return alpha, zGL
 
 
-def compute_alpha_appenB(kisf, plume_var_of_int, ice_draft_neg, dx, dy):   
+def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):   
 
     """
     Compute alphas like in Appendix B of Favier et al., 2019 TCDiscussions.
@@ -608,9 +608,9 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
         Dataset containing 'ISF_mask', 'GL_mask', 'IF_mask', 'dIF', 'dGL_dIF', 'latitude', 'longitude', 'front_ice_depth_avg'
     opt : str
         Method after which to compute the depth and angle. Can be:
-            simple : Zgl and Alpha are found between draft point and deepest GL point.
+            cavity : Zgl and Alpha are found between draft point and deepest GL point.
             lazero: original from Lazeroms et al. 2018
-            appenB: Appendix B in Favier et al 2019 (using local angle)
+            local: local slope
     ice_draft_neg : xr.DataArray
         Ice draft depth in m. Negative downwards.
         
@@ -631,15 +631,15 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
     dx = plume_var_of_int.x[2] - plume_var_of_int.x[1]
     dy = plume_var_of_int.y[2] - plume_var_of_int.y[1]
     
-    if opt == 'simple':
-        print('----------- PREPARATION OF ZGL AND ALPHA WITH SIMPLE APPROACH -----------')
-        alpha = compute_alpha_simple(plume_var_of_int)
+    if opt == 'cavity':
+        print('----------- PREPARATION OF ZGL AND ALPHA WITH CAVITY APPROACH -----------')
+        alpha = compute_alpha_cavity(plume_var_of_int)
         zGL = -1*plume_var_of_int['GL_max']
 
     elif opt == 'lazero':
         print('----------- PREPARATION OF ZGL AND ALPHA WITH LAZEROMS 2018 -----------')
     
-    elif opt == 'appenB':     
+    elif opt == 'local':     
         print('----------- PREPARATION OF ZGL AND ALPHA WITH APPENDIX B FAVIER-----------')
 
         
@@ -648,11 +648,11 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
             
             if opt == 'lazero':
                 alpha, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
-            elif opt == 'appenB':
+            elif opt == 'local':
                 alpha0, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
-                alpha = compute_alpha_appenB(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
+                alpha = compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
             
-            if opt == 'simple':
+            if opt == 'cavity':
                 plume_alpha = plume_alpha.where(plume_var_of_int['ISF_mask'] != kisf, alpha.sel(Nisf=kisf))
                 plume_zGL = plume_zGL.where(plume_var_of_int['ISF_mask'] != kisf, zGL.sel(Nisf=kisf))
             else:
@@ -669,7 +669,7 @@ def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int):
     Parameters
     ----------
     plume_param_options : list of str
-        Parametrization options (typically 'simple', 'lazero' and 'appenB').
+        Parametrization options (typically 'cavity', 'lazero' and 'local').
     ice_draft_pos : xr.DataArray
         Ice draft depth in m. Positive downwards.
     plume_var_of_int : xr.Dataset
