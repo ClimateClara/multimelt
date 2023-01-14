@@ -49,10 +49,10 @@ How to cite multimelt
 
 The detailed description of the application of the functions in multimelt is found in `Burgard et al., 2022`_ and should therefore, when used, be cited as follows:
 
-Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P.: An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere Discuss. [preprint], https://doi.org/10.5194/tc-2022-32, in review, 2022. 
+Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P. (2022): An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere, https://doi.org/10.5194/tc-16-4931-2022. 
 
 
-.. _`Burgard et al., 2022`: https://doi.org/10.5194/tc-2022-32
+.. _`Burgard et al., 2022`: https://doi.org/10.5194/tc-16-4931-2022
 
 
 
