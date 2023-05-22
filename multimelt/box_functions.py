@@ -35,6 +35,8 @@ def distance_isf_points_from_line(whole_domain,isf_points_da,line_points_da):
     
     # remove nans
     filtered_isf_points = stacked_isf_points[stacked_isf_points>0]
+    #filtered_isf_points = stacked_isf_points.where(stacked_isf_points>0, drop=True)
+    #filtered_line = stacked_line.where(stacked_line>0, drop=True)
     filtered_line = stacked_line[stacked_line>0]
     
     # write out the y,x pairs behind the dimension 'grid'

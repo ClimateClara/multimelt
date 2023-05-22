@@ -15,7 +15,7 @@ def dist_sphere(lon1,lon2,lat1,lat2):
 def change_coord_latlon_to_stereo(meshlon,meshlat):
     ### Transformation from latlon to stereo
     trans_tostereo = Transformer.from_crs("EPSG:4326", "EPSG:3031", always_xy=True)
-    meshx, meshy = trans_tolonlat.transform(meshlon,meshlat)
+    meshx, meshy = trans_tostereo.transform(meshlon,meshlat)
     return meshx, meshy
 
 def change_coord_stereo_to_latlon(meshx,meshy):
@@ -29,7 +29,8 @@ def cut_domain_stereo(var_to_cut, map_lim_x, map_lim_y):
     return var_cutted
 
 def weighted_mean(data, dims, weights):
-    return (data*weights).sum(dim=dims)/weights.sum(dim=dims)
+    weight_sum = weights.sum(dim=dims) # to avoid dividing by zero
+    return (data*weights).sum(dim=dims)/weight_sum.where(weight_sum != 0)
 
 def create_stacked_mask(isfmask_2D, nisf_list, dims_to_stack, new_dim):
     # create stacked indices to select the different ice shelves
