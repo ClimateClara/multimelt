@@ -66,7 +66,14 @@ You can create an xr.Dataset containing the main geometric information with the 
                         outputpath_mask, # output path for output to write out intermediate steps
                         inputpath_metadata + 'iceshelves_metadata_Nico.txt', # file containing name and Rignot data about the different ice shelves
                         ground_point ='no', # if 'yes', the grounding line is defined on the ice shelf points at the border to the ground
-                        
+                        FRIS_one=True, # do you want to count Filchner-Ronne as one ice shelf? True if yes, False if you want to have them as two separate ice shelves
+                        variable_geometry=False, # TO BE USED FOR GEOMETRIES DIFFERENT FROM PRESENT - if True, the ice shelves havee a slightly different geometry than present and the limits have to be changed
+                        write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', # if you already wrote one of these files, you can set option to 'no'
+                        dist=40, # Defines the size of the starting square for the ground mask - should be small if the resolution is coarse and high if the resolution is fine - can be modulated
+                        add_fac=120, # Defines additional iterations for the propagation for the ground mask - can be modulated
+                        connectivity=4, # if variable_geometry = True:if 8 it looks at all 8 directions to see define neighbouring ice shelf points, if 4 only horizontally and vertically
+                        threshold=4, # if variable_geometry = True: an entity of 4 points is considered as one ice shelf
+                        write_metadata = 'yes' # writes out the file with only metadata
                         dist=40, # Defines the size of the starting square for the ground mask - should be small if the resolution is coarse and high if the resolution is fine - can be modulated
                         add_fac=120 # Defines additional iterations for the propagation for the ground mask - can be modulated
                                              ) 
@@ -204,10 +211,10 @@ Running
     import xarray as xr
     import multimelt.plume_functions as pf
 
-    plume_param_options = ['simple','lazero', 'appenB'] 
-    # 'simple': deepest grounding line, cavity slope
+    plume_param_options = ['cavity','lazero', 'local'] 
+    # 'cavity': deepest grounding line, cavity slope
     # 'lazero': grounding line and slope inferred according to Lazeroms et al., 2018
-    # 'appenB': grounding line inferred according to Lazeroms et al., 2018 and local slope
+    # 'local': grounding line inferred according to Lazeroms et al., 2018 and local slope
 
     plume_var_of_int = file_isf[['ISF_mask', 'GL_mask', 'IF_mask', 'dIF', 'dGL_dIF', 'latitude', 'longitude', 'front_ice_depth_avg']]
 
