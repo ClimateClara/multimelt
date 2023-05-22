@@ -71,7 +71,7 @@ setuptools.setup(
           'pandas',
           'tqdm',
           'scipy',
-          'cc3d',
+          'connected-components-3d',
           'gsw',
           'pyproj',
           'dask',
