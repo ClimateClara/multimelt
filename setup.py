@@ -71,9 +71,10 @@ setuptools.setup(
           'pandas',
           'tqdm',
           'scipy',
+          'cc3d',
           'gsw',
           'pyproj',
-          'dask'
+          'dask',
       ],
 
 )
