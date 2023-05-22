@@ -31,7 +31,7 @@ setuptools.setup(
     name='multimelt',
     
     #The project's version 
-    version='0.1',
+    version='0.2',
     
     #The project's metadata
     author='Clara Burgard',
