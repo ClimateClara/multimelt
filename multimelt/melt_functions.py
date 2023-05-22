@@ -742,61 +742,12 @@ def plume_param(T_in, S_in, ice_draft_depth, zGL, alpha, gamma, E0, picop=False)
     
     return melt_rate
 
-def plume_param_modif(T_loc, S_loc, ice_draft_depth, deep_zGL, deep_alpha, alpha_loc, T_gl, Tf_gl, E0, gamma, thermal_forcing_avg):
+
+    
+def plume_param_modif(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max_isf,zGL_isf,alpha_isf,conc_isf,dGL_isf,gamma,E0):
     
     """
-    Apply the plume parametrization with modifications (OLD VERSION - DO NOT NECESSARILY USE!).
-    
-    This function computes the basal melt based on a plume parametrization (see Lazeroms et al. 2018 and Lazeroms et al. 2019) with modifications from pers. comm. between A. Jenkins and N. Jourdain.
-    
-    Parameters
-    ----------
-    T_loc : scalar (or array?)
-        Ambient temperature in degrees C.
-    S_loc : scalar (or array?)
-        Ambient salinity in psu.
-    ice_draft_depth : scalar or array
-        Depth of the ice draft in m (depth is negative!).
-    deep_zGL: scalar or array
-        Deepest depth of the grounding line (= where the source of the plume is) in m (depth is negative!).
-    deep_alpha: scalar or array
-        Slope angle in rad (must be positive) over the whole ice shelf.
-    alpha_loc: scalar or array
-        Slope angle in rad (must be positive) at the given point of ice shelf, retrieved with the method from Lazeroms et al 2018 or similar.
-    T_gl : scalar (or array?)
-        Temperature at the grounding line in degrees C.
-    Tf_gl : scalar (or array?)
-        Freezing temperature at the grounding line in degrees C.
-    E0: scalar
-        Entrainment coefficient. Can be modulated for tuning.
-    gamma: scalar
-        Effective thermal Stanton number. Can be modulated for tuning.
-    thermal_forcing_avg: scalar
-        Spatial average of the thermal forcing in K or degrees C.
-
-    Returns
-    -------
-    melt_rate : scalar or array
-        Melt rate in m ice per second.
-    """
-    
-    # local freezing temperature
-    Tf_loc = freezing_temperature(S_loc, ice_draft_depth)
-
-    c_rho_1, c_rho_2, c_tau = compute_c_rho_tau(gamma, S_loc)
-    x_hat = compute_X_hat(ice_draft_depth, deep_zGL, T_gl, Tf_gl, E0, c_tau, deep_alpha, gamma)
-    M_hat = compute_M_hat(x_hat)
-    Mterm = compute_Mterm(T_loc, S_loc, Tf_loc, c_rho_1, c_tau, gamma, E0, alpha_loc, thermal_forcing_avg)
-    melt_rate = Mterm * M_hat * rho_sw/rho_i
-
-    return melt_rate
-
-
-    
-def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max_isf,zGL_isf,alpha_isf,conc_isf,dGL_isf,gamma,E0):
-    
-    """
-    Apply the plume parametrization with modifications (from Burgard et al. 2021).
+    Apply the plume parametrization with modifications (from Burgard et al. 2022).
     
     This function computes the basal melt based on a plume parameterisation (see Lazeroms et al. 2018 and Lazeroms et al. 2019) with modifications from pers. comm. between A. Jenkins and C. Burgard & N. Jourdain.
     
@@ -811,9 +762,9 @@ def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max
     front_bot_dep_max_isf : scalar
         Maximum depth of the continental shelf at the entry of the ice shelf (depth is positive!)
     zGL_isf: scalar or array
-        Depth of the grounding line in m (depth is negative!), containing 'simple' and 'lazero' option.
+        Depth of the grounding line in m (depth is negative!), containing 'cavity' and 'lazero' option.
     alpha_isf: scalar or array
-        Slope angle in rad (must be positive), containing 'simple' and 'lazero' option.
+        Slope angle in rad (must be positive), containing 'cavity' and 'lazero' option.
     conc_isf: array
         Concentration of grid cell covered by the ice shelf.
     dGL_isf : array
@@ -831,12 +782,12 @@ def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max
         Melt rate in m ice per second.
     """
     
-    zGL_simple_isf = -1*zGL_isf.sel(option='simple').max()
+    zGL_cavity_isf = -1*zGL_isf.sel(option='cavity').max()
     zGL_lazero_points = -1*zGL_isf.sel(option='lazero')
     
-    depth_GL_to_interp = zGL_simple_isf.where(zGL_simple_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
+    depth_GL_to_interp = zGL_cavity_isf.where(zGL_cavity_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
     S_GL = salinity_isf.interp({'depth': depth_GL_to_interp}).drop('depth')
-    Tf_GL = freezing_temperature(S_GL, -1*zGL_simple_isf)
+    Tf_GL = freezing_temperature(S_GL, -1*zGL_cavity_isf)
 
     ###### LOCAL STUFF
     depth_of_int = ice_draft_points.where(ice_draft_points < front_bot_dep_max_isf, front_bot_dep_max_isf)
@@ -845,7 +796,7 @@ def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max
     S0_loc = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
     Tf_loc = freezing_temperature(S0_loc, -1*ice_draft_points)
     c_rho_1_loc, c_rho_2_loc, c_tau_loc = compute_c_rho_tau(gamma, S0_loc)
-    alpha_loc = alpha_isf.sel(option='appenB')
+    alpha_loc = alpha_isf.sel(option='local')
     
     ##### CAVITY MEAN => Mhat
     # Mean temperature and salinity over whole ice-shelf base
@@ -854,13 +805,13 @@ def plume_param_modif2(theta_isf,salinity_isf,ice_draft_points,front_bot_dep_max
     # Mean coefficients over whole ice-shelf base
     c_rho_1_mean_cav, c_rho_2_mean_cav, c_tau_mean_cav = compute_c_rho_tau(gamma, S0_mean_cav)
     # Length scale and M_hat over whole ice-shelf base
-    x_mean_cav = compute_X_hat(-1*ice_draft_points,-1*zGL_simple_isf,T0_mean_cav,Tf_GL,E0,c_tau_mean_cav,alpha_isf.sel(option='simple'),gamma)
+    x_mean_cav = compute_X_hat(-1*ice_draft_points,-1*zGL_cavity_isf,T0_mean_cav,Tf_GL,E0,c_tau_mean_cav,alpha_isf.sel(option='cavity'),gamma)
     M_hat = compute_M_hat(x_mean_cav)
     
     ##### UPSTREAM STUFF
     ### if we want to take the mean of the profile in front of the ice shelf
     # interpolate T and S profiles on regular depth axis for the mean
-    depth_axis_loc = xr.DataArray(data=np.arange(1,zGL_simple_isf+1),dims=['depth']).chunk({'depth':50})
+    depth_axis_loc = xr.DataArray(data=np.arange(1,zGL_cavity_isf+1),dims=['depth']).chunk({'depth':50})
     # make sure to not use T and S lower than the maximum front depth
     depth_axis_loc_cut = depth_axis_loc.where(depth_axis_loc<front_bot_dep_max_isf,front_bot_dep_max_isf)
     depth_axis_loc_cut = depth_axis_loc_cut.assign_coords({'depth':depth_axis_loc})
@@ -1442,18 +1393,18 @@ def calculate_melt_rate_2D_simple_1isf(kisf, T_S_profile, geometry_info_2D, geom
     elif mparam0 == 'quadratic_local':
         melt_rate = quadratic_local_param(gamma, melt_factor, thermal_forcing, U_factor)
     elif mparam0 == 'quadratic_local_locslope':
-        local_angle = geometry_isf_2D['alpha'].sel(option='appenB')
+        local_angle = geometry_isf_2D['alpha'].sel(option='local')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing, U_factor, local_angle)
     elif mparam0 == 'quadratic_local_cavslope':
-        local_angle = geometry_isf_2D['alpha'].sel(option='simple')
+        local_angle = geometry_isf_2D['alpha'].sel(option='cavity')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing, U_factor, local_angle)
     elif mparam0 == 'quadratic_mixed_mean':  
         melt_rate = quadratic_mixed_mean(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor)
     elif mparam0 == 'quadratic_mixed_locslope':
-        local_angle = geometry_isf_2D['alpha'].sel(option='appenB')
+        local_angle = geometry_isf_2D['alpha'].sel(option='local')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor, local_angle)
     elif mparam0 == 'quadratic_mixed_cavslope':
-        local_angle = geometry_isf_2D['alpha'].sel(option='simple')
+        local_angle = geometry_isf_2D['alpha'].sel(option='cavity')
         melt_rate = quadratic_mixed_slope(gamma, melt_factor, thermal_forcing, thermal_forcing_avg, U_factor, local_angle)
         
     return melt_rate
@@ -1465,10 +1416,8 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
 
     """
     Function to compute melt from plume parameterisations for one ice shelf.
-    'lazero19': NOT USED ANYMORE - uses hydrographic properties extrapolated to the grounding line as ambient temperature and salinity
-    'lazero19_2': uses average of hydrographic properties extrapolated to local ice draft depth as ambient temperature and salinity
-    'lazero19_modif': NOT USED ANYMORE - OLD version of modification - will be deleted in future
-    'lazero19_modif2': Modification presented in Burgard et al. 2021
+    'lazero19': uses average of hydrographic properties extrapolated to local ice draft depth as ambient temperature and salinity
+    'lazero19_modif': Modification presented in Burgard et al. 2022
         
     Parameters
     ----------
@@ -1508,26 +1457,9 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
     theta_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf)
     salinity_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf)
     
-    zGL_simple_pos = -1*zGL_isf.sel(option='simple') 
+    zGL_cavity_pos = -1*zGL_isf.sel(option='cavity') 
 
     if mparam == 'lazero19':
-        
-        moption = 'lazero'
-        zGL = zGL_isf.sel(option=moption)
-        zGL_pos = -1*zGL
-        alpha = alpha_isf.sel(option=moption)
-        
-        # grounding line depth or deepest point of entrance 
-        depth_of_int = zGL_pos.where(zGL_pos < front_bot_dep_max_isf, front_bot_dep_max_isf)
-        # find temperature and salinity at the given depth
-        depth_of_int = depth_of_int.where(isf_mask)
-        T0 = theta_isf.interp({'depth': depth_of_int}).drop('depth')
-        S0 = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
-        
-        melt_rate = plume_param(T0, S0, -1*ice_draft_pos_isf, zGL.squeeze().drop('option'), alpha.squeeze().drop('option'), 
-                                      gamma, E0)
-    
-    elif mparam == 'lazero19_2':
         
         moption = 'lazero'
         zGL = zGL_isf.sel(option=moption)
@@ -1561,40 +1493,9 @@ def calculate_melt_rate_2D_plumes_1isf(kisf, T_S_profile, geometry_info_2D, geom
         
         melt_rate = plume_param(T0_mean_cav, S0_mean_cav, -1*ice_draft_pos_isf, zGL.squeeze().drop('option'), alpha.squeeze().drop('option'), 
                               gamma, E0)
-
-    elif mparam == 'lazero19_modif':
-        
-        # either the depth of the draft or the deepest entrance point
-        depth_of_int = ice_draft_pos_isf.where(ice_draft_pos_isf < front_bot_dep_max_isf, front_bot_dep_max_isf)
-        # find temperature and salinity at the given depth
-        depth_of_int = depth_of_int.where(isf_mask)
-        T0 = theta_isf.interp({'depth': depth_of_int}).drop('depth')
-        S0 = salinity_isf.interp({'depth': depth_of_int}).drop('depth')
-        
-        # compute the freezing temperature at the ice draft depth
-        Tf = freezing_temperature(S0, -1*ice_draft_pos_isf)
-        thermal_forcing = T0 - Tf
-        thermal_forcing_avg = uf.weighted_mean(thermal_forcing, ['mask_coord'], conc_isf)
-
-        # grounding line depth or deepest point of entrance 
-        new_depth_of_int = zGL_simple_pos.where(zGL_simple_pos < front_bot_dep_max_isf, front_bot_dep_max_isf)
-        new_depth_of_int = new_depth_of_int.where(isf_mask)
-
-        T0b = theta_isf.interp({'depth': new_depth_of_int}).drop('depth')
-        S0b = salinity_isf.interp({'depth': new_depth_of_int}).drop('depth')
-        Tfb = freezing_temperature(S0b, -1*zGL_simple_pos)
-
-        T0 = theta_isf.interp({'depth': ice_draft_pos_isf}).drop('depth')
-        S0 = salinity_isf.interp({'depth': ice_draft_pos_isf}).drop('depth')
-
-        melt_rate = plume_param_modif(T0, S0, -1*ice_draft_pos_isf, zGL_isf.sel(option='simple').squeeze().drop('option'), 
-                                            alpha_isf.sel(option='simple').squeeze().drop('option'), 
-                                            alpha_isf.sel(option='lazero').squeeze().drop('option'), 
-                                            T0b, Tfb, E0, gamma, thermal_forcing_avg)
-
     
-    elif mparam == 'lazero19_modif2':
-        melt_rate = plume_param_modif2(theta_isf,salinity_isf,
+    elif mparam == 'lazero19_modif':
+        melt_rate = plume_param_modif(theta_isf,salinity_isf,
                                        ice_draft_pos_isf,front_bot_dep_max_isf,zGL_isf,alpha_isf,conc_isf,dGL_isf,
                                        gamma,E0)
     
@@ -1650,7 +1551,7 @@ def calculate_melt_rate_2D_boxes_1isf(kisf, T_S_profile, geometry_info_2D, geome
     conc_isf = geometry_isf_2D['isfdraft_conc']
     isf_cell_area = geometry_isf_2D['grid_cell_area_weighted']
     ice_draft_neg_isf = -1*geometry_isf_2D['ice_draft_pos']
-    deepest_GL = -1*uf.choose_isf(geometry_info_2D['zGL'].sel(option='simple'),isf_stack_mask, kisf).max()
+    deepest_GL = -1*uf.choose_isf(geometry_info_2D['zGL'].sel(option='cavity'),isf_stack_mask, kisf).max()
     front_bot_dep_max_isf = geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf)
     front_bot_dep_avg_isf = geometry_info_1D['front_bot_depth_avg'].sel(Nisf=kisf)
     
@@ -1718,7 +1619,7 @@ def calculate_melt_rate_2D_picop_1isf(kisf, T_S_profile, geometry_info_2D, geome
     E0 : float
         Entrainment coefficient.
     angle_option : str
-        Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+        Slope to be used, choice between "cavity" (cavity slope), "lazero" (lazeroms18), "local" (local slope)
     pism_version: str
         Can be ``yes`` or ``no``, depending on if you want to use the PICO version as implemented in PISM or the original PICO (uniform box melt). See Sec. 2.4 by Reese et al. 2018 for more info. 
     picop_opt: str
@@ -1794,7 +1695,7 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
         E0 : float
             Entrainment coefficient.
         angle_option : str
-            Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+            Slope to be used, choice between "cavity" (cavity slope), "lazero" (lazeroms18), "local" (local slope)
         box_charac_2D : xarray.Dataset
             Dataset containing relevant 2D box characteristics for all ice shelves.
         box_charac_1D : xarray.Dataset
@@ -1827,7 +1728,7 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
             #print('Computing simple '+mparam+' melt rates and writing to file')
             melt_rate_2D_isf = calculate_melt_rate_2D_simple_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, 
                                                                   isf_stack_mask, mparam, gamma, U_param, HUB)
-        elif mparam in ['lazero19', 'lazero19_2', 'lazero19_modif', 'lazero19_modif2']:
+        elif mparam in ['lazero19', 'lazero19_modif']:
             #print('Computing plume '+mparam+' melt rates and writing to file')
             if E0 is None:
                 print('Careful! I did not receive a E0, I am using the default value!')
@@ -1905,7 +1806,7 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
     E0 : float
         Entrainment coefficient.
     angle_option : str
-        Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+        Slope to be used, choice between "cavity" (cavity), "lazero" (lazeroms18), "local" (local)
     box_charac_2D : xarray.Dataset
         Dataset containing relevant 2D box characteristics for all ice shelves.
     box_charac_1D : xarray.Dataset
@@ -2077,7 +1978,7 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
     E0 : float
         Entrainment coefficient.
     angle_option : str
-        Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+        Slope to be used, choice between "cavity" (cavity), "lazero" (lazeroms18), "local" (local)
     box_charac_2D : xarray.Dataset
         Dataset containing relevant 2D box characteristics for all ice shelves.
     box_charac_1D : xarray.Dataset
@@ -2160,7 +2061,7 @@ def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_inf
     E0 : float
         Entrainment coefficient.
     angle_option : str
-        Slope to be used, choice between "simple" (cavity), "lazero" (lazeroms18), "appenB" (local)
+        Slope to be used, choice between "cavity" (cavity), "lazero" (lazeroms18), "local" (local)
     box_charac_2D : xarray.Dataset
         Dataset containing relevant 2D box characteristics for all ice shelves.
     box_charac_1D : xarray.Dataset
