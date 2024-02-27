@@ -911,8 +911,69 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
             
     return  np.arctan(sn_new), -1*GL_neighbors_new
 
+def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, dir_nb, grad_corr, extra_shift):
 
+    """
+    Compute zGL and alphas with a revisitation of the Lazeroms approach.
     
+    This function computes zGl and alphas following a slightly different methodology than Lazeroms et al., 2018 but inspired by it.
+
+    Parameters
+    ----------
+    kisf : int
+        ID of the ice shelf of interest
+    plume_var_of_int : xr.Dataset
+        Dataset containing ``'ISF_mask'`` and ``'GL_mask'``
+    ice_draft_neg : xr.DataArray
+        Ice draft depth in m. Negative downwards.
+    ds_isf_lazeroms: xr.Dataset
+        Dataset containing the grounding line depth at the origin of the plume (``'gl_depth'``) and the gradient between the ice draft depth and the grounding line (``'gl_gradient'``)
+    dx : float
+        Grid spacing in the x-direction
+    dy : float
+        Grid spacing in the y-direction
+        
+    Returns
+    -------
+    alpha: xr.DataArray
+        Mean angle at the plume origin in rad for each point.
+    zGL: xr.DataArray
+        Mean depth of the grounding line in m at the plume origin for each point (negative downwards). 
+    """
+    
+    weights8 = create_8_dir_weights()
+    weights16 = create_16_dir_weights()
+    weights16_across = create_16_dir_weights_across()
+
+    weights8_0 = weights8.where(weights8 < 0,0) * -1
+    weights8_0 = weights8_0.where(weights8_0 > 0,0)
+
+    weights16_0 = weights16.where(weights16 < 0,0) * -1
+    weights16_0 = weights16_0.where(weights16_0 > 0,0)
+
+         
+    # prepare mask for whole domain (GL + ice shelf)
+    plume_var_of_int['GL_and_ISF_mask'] = plume_var_of_int['GL_mask'].combine_first(plume_var_of_int['ISF_mask'])
+    isf_and_GL_mask = plume_var_of_int['GL_and_ISF_mask'].where(
+        (plume_var_of_int['ISF_mask'] == kisf) | (plume_var_of_int['GL_mask'] == kisf)).dropna(how='all',dim='x').dropna(how='all', dim='y')
+    ice_draft_neg_isf = ice_draft_neg.where(isf_and_GL_mask == kisf)
+
+    # first crit        
+    sn_isf, sn_isf_corr, first_crit, first_crit_corr = first_criterion_lazero_general(kisf, plume_var_of_int, ice_draft_neg_isf, isf_and_GL_mask, weights16_across, dx, dy, dir_nb=16, grad_corr=3, extra_shift=2) 
+
+
+    # second crit and zGL and alpha
+    alpha_kisf, zGL_kisf = lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, plume_var_of_int['GL_mask'], isf_and_GL_mask, 1, weights8_0, weights16_0, 200, sn_isf, first_crit, sn_isf_corr, first_crit_corr)
+    #alpha_kisf = alpha_kisf.where(alpha_kisf < 0, 0).where(np.isfinite(isf_and_GL_mask))
+    #zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf).where(np.isfinite(isf_and_GL_mask))
+    
+    alpha_kisf = alpha_kisf.where(np.isfinite(alpha_kisf), 0)
+    zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg)
+    
+    go_back_to_whole_grid_alpha = alpha_kisf.reindex_like(plume_var_of_int['ISF_mask'])
+    go_back_to_whole_grid_zgl = zGL_kisf.reindex_like(plume_var_of_int['ISF_mask'])   
+    
+    return go_back_to_whole_grid_alpha,  go_back_to_whole_grid_zgl
 
 
 def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):   
@@ -959,7 +1020,7 @@ def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
 
     return go_back_to_whole_grid_local_alpha
 
-def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
+def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir_nb=16, extra_shift=2):
 
     """
     Compute grounding line and angle for the plume for all ice shelves.
@@ -1000,6 +1061,9 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
 
     elif opt == 'lazero':
         print('----------- PREPARATION OF ZGL AND ALPHA WITH LAZEROMS 2018 -----------')
+
+    elif opt == 'new lazero':
+        print('----------- PREPARATION OF ZGL AND ALPHA WITH MODIFIED LAZEROMS 2018 -----------')
     
     elif opt == 'local':     
         print('----------- PREPARATION OF ZGL AND ALPHA WITH APPENDIX B FAVIER-----------')
@@ -1010,6 +1074,8 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
             
             if opt == 'lazero':
                 alpha, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
+            elif opt == 'new_lazero':
+                alpha, zGL = compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, grad_corr, dir_nb, extra_shift)
             elif opt == 'local':
                 alpha0, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
                 alpha = compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
@@ -1022,8 +1088,10 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg):
                 plume_zGL = plume_zGL.where(plume_var_of_int['ISF_mask'] != kisf, zGL)
     
     return plume_alpha, plume_zGL
+
+
     
-def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int):
+def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int, grad_corr=0, dir_nb=16, extra_shift=2):
 
     """
     Overall function to compute the plume characteristics depending on geometry.
@@ -1049,7 +1117,7 @@ def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int):
     plume_var_of_int = prepare_plume_dataset(plume_var_of_int,plume_param_options)
     
     for opt in plume_param_options: 
-        alpha, zGL = compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg)
+        alpha, zGL = compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr, dir_nb, extra_shift)
         plume_var_of_int['alpha'].loc[dict(option=opt)] = alpha
         plume_var_of_int['zGL'].loc[dict(option=opt)] = zGL
            
