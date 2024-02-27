@@ -552,6 +552,368 @@ def compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
     
     return alpha, zGL
 
+def create_8_dir_weights():
+    
+    """
+    Prepare correlation filter in 8 directions.
+    
+    Returns
+    -------
+    ds_weights : xr.Dataset
+        Weights for the filter and information about the x- and y-shift in the 16 directions.
+    """
+    
+    #print('prepare correlation mask to check the 16 defined directions')
+    #prepare correlation mask to check the 16 defined directions (1 in the middle and -1 in all interesting directions)
+    dir_x = np.arange(-1, 2)
+    dir_y = np.arange(-1, 2)
+
+    weights_gradients = np.zeros((3, 3, 8))
+    weights_gradients[1, 1, :] = 1
+    layer_x = []
+    layer_y = []
+
+    n = 0
+    for shift_x in dir_x:
+        for shift_y in dir_y:
+
+            cond_0 = (shift_x == 0 and shift_y == 0) 
+
+            if not cond_0:
+
+                layer_x.append(shift_x)
+                layer_y.append(shift_y)
+                weights_gradients[1 + shift_y, 1 + shift_x, n] = -1 # y first, x then because of the initial grid being like this
+                n = n + 1
+
+    # make a dataset with it to remember the associated shift_x and shift_y
+    xr_weights = xr.DataArray(data=weights_gradients, dims=['y0', 'x0', 'direction'], coords={'direction': np.arange(8)})
+    ds_weights = xr.Dataset(data_vars={'weights': xr_weights})
+    ds_weights['shift_x'] = xr.DataArray(data=np.array(layer_x), dims=['direction'])
+    ds_weights['shift_y'] = xr.DataArray(data=np.array(layer_y), dims=['direction'])
+    return ds_weights
+
+
+
+def first_criterion_lazero_general(kisf, plume_var_of_int, ice_draft_neg_isf, isf_and_GL_mask, ds_weights, dx, dy, dir_nb=16, grad_corr=0, extra_shift=2):
+
+    """
+    Define first criterion for the plume parameters using a smoother version of the 16 directions and permitting to use a different amount of directions
+    
+    This function computes the basal slope and identifies the first criterion, following the methodology in Lazeroms et al;, 2018.
+
+    Parameters
+    ----------
+    kisf : int
+        ID of the ice shelf of interest
+    plume_var_of_int : xr.Dataset
+        Dataset containing ``'ISF_mask'`` and ``'GL_mask'``
+    ice_draft_neg_isf : xr.DataArray
+        Ice draft depth for the given ice shelf in m. Negative downwards.
+    isf_and_GL_mask : xr.DataArray
+        Mask of the domain covered by the ice shelf and the grounding line (this extra mask is needed if the grounding line is defined on ground points)
+    ds_weights : xr.Dataset
+        Weights for the filter and information about the x- and y-shift in the 16 directions.
+    dx : float
+        Grid spacing in the x-direction
+    dy : float
+        Grid spacing in the y-direction
+    dir_nb: int
+        Amount of directions used. I tried with 8, 16, 24. Decided to stay with 16.
+    grad_corr: int
+        If we want to add some uncertainty in the slopes (adds grad_corr to the gradient) => makes it easier to have positive slopes when the differences are tiny.
+    extra_shift: int
+        Should be 2 if you do the smooth version, otherwise 1.
+        
+        
+    Returns
+    -------
+    GL_depth : xr.DataArray
+        Depth of the grounding line points (negative downwards).
+    sn_isf : xr.DataArray
+        Basal slope in all 16 directions
+    first_crit : xr.DataArray
+        Boolean where sn_sf > 0
+    draft_depth : 
+        Ice draft depth in m (negative downwards) extended through the 'direction' dimension.
+    """
+    
+    # add dimension for directions to the ice_draft array
+    other = xr.DataArray(np.zeros(dir_nb), coords=[('direction', np.arange(dir_nb))])
+    ice_draft_neg_dirs, other2 = xr.broadcast(ice_draft_neg_isf, other)
+
+    # draft depth only on the ice shelf
+    draft_depth = ice_draft_neg_dirs.where(isf_and_GL_mask).where((plume_var_of_int['ISF_mask'] == kisf))
+
+    # grounding line depth only where grounding line
+    GL_depth = ice_draft_neg_dirs.where(isf_and_GL_mask).where(plume_var_of_int['GL_mask'] == kisf)
+    GL_depth = GL_depth.where(GL_depth < 0, 0)
+
+    # apply the correlation filter to compute gradients in the 16 directions (xr_nd_corr_sig does not work for whatever reason :( ))
+    gradients = xr_nd_corr(draft_depth, ds_weights['weights'])
+
+    # compute the sn - basal slope - to be consistent with the origin of the plumes, we cut the basal slopes after ice shelves as well - but might need to think about what happens when several ice shelves are touching each other
+    sn_isf = gradients / np.sqrt((ds_weights['shift_x'] * extra_shift * np.abs(dx)) ** 2 + (ds_weights['shift_y'] * extra_shift * np.abs(dy)) ** 2)
+    # adding correction for criterion
+    sn_isf_corr = (gradients +  grad_corr) / np.sqrt((ds_weights['shift_x'] * extra_shift * np.abs(dx)) ** 2 + (ds_weights['shift_y'] * extra_shift * np.abs(dy)) ** 2)
+    # 1st criterion: sn > 0
+    first_crit = sn_isf > 0
+    first_crit_corr = sn_isf_corr > 0
+
+    return sn_isf, sn_isf_corr, first_crit, first_crit_corr
+
+def create_16_dir_weights_across():
+    
+    """
+    Prepare correlation filter in 16 directions in a smooth way.
+    
+    This function prepares the correlation filter in 16 directions, following the methodology in Lazeroms et al;, 2018, BUT making it across the point (instead of finishing at the point).
+
+    Returns
+    -------
+    ds_weights : xr.Dataset
+        Weights for the filter and information about the x- and y-shift in the 16 directions.
+    """
+    
+    #print('prepare correlation mask to check the 16 defined directions')
+    #prepare correlation mask to check the 16 defined directions (1 in the middle and -1 in all interesting directions)
+    dir_x = np.arange(-2, 3)
+    dir_y = np.arange(-2, 3)
+
+    weights_gradients = np.zeros((5, 5, 16))
+    #weights_gradients[2, 2, :] = 1
+    layer_x = []
+    layer_y = []
+
+    n = 0
+    for shift_x in dir_x:
+        for shift_y in dir_y:
+
+            cond_0 = (shift_x == 0 and shift_y == 0) | (shift_x == 0 and abs(shift_y) == 2) | (
+                        abs(shift_x) == 2 and shift_y == 0) | (abs(shift_x) == 2 and abs(shift_y) == 2)
+
+            if not cond_0:
+                layer_x.append(shift_x)
+                layer_y.append(shift_y)
+                weights_gradients[2 + shift_y, 2 + shift_x, n] = -1 # y first, x then because of the initial grid being like this
+                weights_gradients[2 - shift_y, 2 - shift_x, n] = 1
+                n = n + 1
+
+    # make a dataset with it to remember the associated shift_x and shift_y
+    xr_weights = xr.DataArray(data=weights_gradients, dims=['y0', 'x0', 'direction'], coords={'direction': np.arange(16)})
+    ds_weights = xr.Dataset(data_vars={'weights': xr_weights})
+    ds_weights['shift_x'] = xr.DataArray(data=np.array(layer_x), dims=['direction'])
+    ds_weights['shift_y'] = xr.DataArray(data=np.array(layer_y), dims=['direction'])
+    return ds_weights
+
+def lazero_GL_alpha_kisf_newmethod(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL_mask, dist_incl, weights8_0, weights16_0, mid_coord, sn_isf, first_crit):
+    """
+    
+    This function computes the plume departing grounding line depth and the local angle in a smoother manner than Lazeroms et al. 2018. 
+    Remains heavily inspired from Lazeroms et al. 2018 (using the 16 directions).
+    Includes an option to extend the grounding line to neighboring points in case the original grounding line is weirdly shallow.
+    This will produce fields with potential regions of nans because there is an obstacle with too many negative slopes. If you want to get rid of these obstacles,
+    use the newmethod2 below.
+    
+    kisf : int
+        ID of the ice shelf of interest
+    ice_draft_neg : xr.DataArray
+        Ice draft depth (Negative with depth!)
+    GL_mask : xr.DataArray
+        Mask of the Antarctic grounding lines
+    isf_and_GL_mask : xr.DataArray  
+        Mask of the isf and associated GL
+    dist_incl : int
+        Distance, in grid cells, to count within the grounding line
+    weights8_0 : xr.Dataset
+        Contains the weights (0,1) to look at the 8 neighbours of a point
+    weights16_0 : xr.Dataset
+        Contains the weights (0,1) to look in the 16 directions, starting at the point
+    mid_coord : int
+        Indication on how many times to propagate the grounding line
+    sn_isf : xr.DataArray
+        Slopes
+    first_crit : xr.DataArray
+       First criterion
+
+        
+    Returns
+    -------
+    alpha: xr.DataArray
+        Slopes to use for Lazeroms version of plume parameterisation for one ice shelf.
+    zGL: xr.DataArray
+        Grounding line depth to use for Lazeroms version of plume parameterisation for one ice shelf.
+    
+    """
+    
+    # Enlarge GL mask to dist_incl rows (e.g. if your initial GL is shallow)
+    GL_mask1_0 = (GL_mask == kisf)
+    GL_2_mask = GL_mask1_0
+    for n in range(dist_incl):
+        GL_2 = xr_nd_corr(GL_2_mask, weights8_0['weights'])
+        GL_2_sum = GL_2.sum('direction').where(isf_and_GL_mask == kisf)
+        GL_2_mask = (GL_2_sum > 0).astype(int)
+        
+    # Cut out the GL band in draft depth
+    GL_depth_isf = -1*(ice_draft_neg_isf.where(GL_2_mask))
+    
+    # Propagate GL depth in the whole ice shelf
+    
+    # Initialise the field at grounding line
+    GL_neighbors_new = GL_depth_isf
+    sn_new = sn_isf.mean('direction')
+    sn_new = sn_new.where(sn_new >= 0,0).where(GL_2_mask > 0)
+    
+    second_crit_all = GL_depth_isf* 0 + 1
+    
+    # Iterate to advace the propagation
+    for n in range(mid_coord):
+
+        GL_neighbors = xr_nd_corr(GL_neighbors_new, weights16_0['weights'])
+        
+        # cut out the newly formed data strip
+        GL_neighbors_step = GL_neighbors.where(np.isnan(GL_neighbors_new))
+        GL_neighbors_step = GL_neighbors_step.where(isf_and_GL_mask == kisf)
+
+        # check if the propagated GL is deeper than point
+        diff_base_GL = (-1*ice_draft_neg_isf - GL_neighbors_step)
+        second_crit_n = diff_base_GL <= 0 #<=
+        
+        # combine this criterion and the slope criterion
+        all_crit =  first_crit & second_crit_n #
+        
+        # make a mean over all valid GL depths
+        GL_mean = GL_neighbors_step.where(all_crit).mean('direction')
+        GL_neighbors_new = GL_neighbors_new.where(GL_neighbors_new > 0,GL_mean)    
+        
+        # make a mean over all valid slopes
+        sn_mean = sn_isf.where(GL_neighbors_step, drop=True).where(all_crit).mean('direction')
+        sn_new = sn_new.where(sn_new >= 0,sn_mean)
+        
+        second_crit_all = second_crit_all.where(second_crit_all > 0,second_crit_n)   
+        
+    return np.arctan(sn_new), -1*GL_neighbors_new
+
+
+def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL_mask, dist_incl, weights8_0, weights16_0, mid_coord, sn_isf, first_crit, sn_isf_corr, first_crit_corr):
+    """
+    
+    This function computes the plume departing grounding line depth and the local angle in a smoother manner than Lazeroms et al. 2018. 
+    Remains heavily inspired from Lazeroms et al. 2018 (using the 16 directions).
+    Includes an option to extend the grounding line to neighboring points in case the original grounding line is weirdly shallow.
+    
+    kisf : int
+        ID of the ice shelf of interest
+    ice_draft_neg : xr.DataArray
+        Ice draft depth (Negative with depth!)
+    GL_mask : xr.DataArray
+        Mask of the Antarctic grounding lines
+    isf_and_GL_mask : xr.DataArray  
+        Mask of the isf and associated GL
+    dist_incl : int
+        Distance, in grid cells, to count within the grounding line
+    weights8_0 : xr.Dataset
+        Contains the weights (0,1) to look at the 8 neighbours of a point
+    weights16_0 : xr.Dataset
+        Contains the weights (0,1) to look in the 16 directions, starting at the point
+    mid_coord : int
+        Indication on how many times to propagate the grounding line
+    sn_isf : xr.DataArray
+        Slopes
+    first_crit : xr.DataArray
+       First criterion
+    
+    """
+    
+    # Enlarge GL mask to dist_incl rows (e.g. if your initial GL is shallow)
+    GL_mask1_0 = (GL_mask == kisf)
+    GL_2_mask = GL_mask1_0
+    for n in range(dist_incl):
+        GL_2 = xr_nd_corr(GL_2_mask, weights8_0['weights'])
+        GL_2_sum = GL_2.sum('direction').where(isf_and_GL_mask == kisf)
+        GL_2_mask = (GL_2_sum > 0).astype(int)
+        
+    # Cut out the GL band in draft depth
+    GL_depth_isf = -1*(ice_draft_neg_isf.where(GL_2_mask))
+
+    # Initialise the field at grounding line
+    GL_neighbors_new = GL_depth_isf
+    sn_new = sn_isf.where(first_crit).mean('direction')
+    sn_new = sn_new.where(sn_new > 0,0).where(GL_2_mask > 0)
+
+    second_crit_all = GL_depth_isf* 0 + 1
+
+    diff_masks = 1
+    i = 0
+    diff_stop = 0
+
+    while diff_stop < 3:
+
+        mask_old_domain = np.isnan(GL_neighbors_new)
+
+        GL_neighbors = xr_nd_corr(GL_neighbors_new, weights16_0['weights'])
+
+        # cut out the newly formed data strip
+        GL_neighbors_step = GL_neighbors.where(np.isnan(GL_neighbors_new))
+        GL_neighbors_step = GL_neighbors_step.where(isf_and_GL_mask == kisf)
+
+        # check if the propagated GL is deeper than point
+        diff_base_GL = (-1*ice_draft_neg_isf - GL_neighbors_step)
+        second_crit_n = diff_base_GL < 0 #<=
+
+        # combine this criterion and the slope criterion
+        all_crit =  first_crit & second_crit_n #
+
+        if diff_masks != 0:
+
+            # make a mean over all valid GL depths
+            GL_mean = GL_neighbors_step.where(all_crit).mean('direction')
+            GL_neighbors_new = GL_neighbors_new.where(GL_neighbors_new > 0,GL_mean)    
+
+            # make a mean over all valid slopes
+            sn_mean = sn_isf.where(all_crit).mean('direction')
+            sn_new = sn_new.where(sn_new > 0,sn_mean)
+
+            second_crit_all = second_crit_all.where(second_crit_all > 0,second_crit_n)   
+
+            diff_stop = 0
+
+        else:
+
+            #print('Entering obstacle option')
+
+            # insert corrected sn and first crit
+            first_crit_corr2 = first_crit.where((all_crit.sum('direction') > 0), first_crit_corr)
+            all_crit_corr = (first_crit_corr2 & second_crit_n).where(np.isfinite(GL_neighbors_step))
+            sn_isf_corr2 = sn_isf.where((all_crit.sum('direction') > 0), sn_isf_corr).where(np.isfinite(GL_neighbors_step))
+
+            # make a mean over all valid GL depths
+            GL_mean = GL_neighbors_step.where(all_crit_corr).mean('direction')
+            GL_neighbors_new = GL_neighbors_new.where(GL_neighbors_new > 0,GL_mean)    
+
+            # make a mean over all valid slopes
+            sn_mean = sn_isf_corr2.where(all_crit_corr).mean('direction')
+            sn_new = sn_new.where(sn_new > 0,sn_mean)
+
+            second_crit_all = second_crit_all.where(second_crit_all > 0,second_crit_n)   
+
+
+        # check if we still have obstacles
+        mask_new_domain = np.isnan(GL_neighbors_new)
+        diff_masks = (mask_new_domain.astype(int) - mask_old_domain.astype(int)).sum().values
+
+        # check if we have reached the maximum
+        diff_mask_isf = np.isnan(GL_neighbors_new) & (isf_and_GL_mask == kisf)
+
+        if diff_masks == 0:
+            #print('mask did not change', diff_stop)
+            diff_stop = diff_stop+1
+            
+    return  np.arctan(sn_new), -1*GL_neighbors_new
+
+
+    
+
 
 def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):   
 

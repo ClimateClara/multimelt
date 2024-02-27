@@ -493,13 +493,12 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy):
         #################
         # fix the problems around Alexander Island (ice shelves with grounding line only on the island)
         mask_gline_orig = mask_gline.copy()
-
-        larger_region = new_mask.sel(x=np.arange(-2998000.,0.5,dx),y=np.arange(2998000.,0,dy))
+                
+        larger_region = new_mask.sel(x=slice(-2998000.,0.5),y=slice(0,2998000.))
         mask_10_isl = larger_region.where(larger_region == 0, 5).where(larger_region != 0, 1)
         mask_isl = mask_10_isl.where(mask_10_isl == 1, 0) #set all ice shelves and open ocean to 0, set all grounded ice to 1
-
-
-        core = mask_isl.sel(x=np.arange(-1938000.,-1900000., dx),y=np.arange(718000.,680000., dy)).reindex_like(mask_isl)
+        
+        core = mask_isl.sel(x=slice(- 1938000.,- 1900000.),y=slice(680000.,718000.)).reindex_like(mask_isl)
         mask_core = mask_isl.where(np.isnan(core),5)
 
         # filter that checks the point around
