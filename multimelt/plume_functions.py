@@ -944,7 +944,7 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
         if diff_stop == 2:
             
             # cut out areas that are nan and potentially are near a grounding line of an island
-            start_new_GL = (gl_mask_isl) & ~(GL_neighbors_new > 0) & ~(plume_var_of_int['GL_mask'] == kisf) & (isf_and_GL_mask == kisf)
+            start_new_GL = (gl_mask_isl) & ~(GL_neighbors_new > 0) & ~(GL_mask == kisf) & (isf_and_GL_mask == kisf)
             
             GL_neighbors_new2 = -1*(ice_draft_neg_isf.where(start_new_GL))
             sn_new2 = sn_isf.where(first_crit).mean('direction')
@@ -955,7 +955,7 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
             
             diff_masks2 = 1
 
-            for n in range(30):
+            for n in range(50):
 
                 GL_neighbors = xr_nd_corr(GL_neighbors_new2, weights16_0['weights'])
 
