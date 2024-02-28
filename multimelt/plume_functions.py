@@ -283,6 +283,48 @@ def create_16_dir_weights():
     ds_weights['shift_y'] = xr.DataArray(data=np.array(layer_y), dims=['direction'])
     return ds_weights
 
+def create_4_dir_weights():
+    
+    """
+    Prepare correlation filter in 8 directions.
+    
+    Returns
+    -------
+    ds_weights : xr.Dataset
+        Weights for the filter and information about the x- and y-shift in the 16 directions.
+    """
+    
+    #print('prepare correlation mask to check the 16 defined directions')
+    #prepare correlation mask to check the 16 defined directions (1 in the middle and -1 in all interesting directions)
+    dir_x = np.arange(-1, 2)
+    dir_y = np.arange(-1, 2)
+
+    weights_gradients = np.zeros((3, 3, 4))
+    weights_gradients[1, 1, :] = 1
+    layer_x = []
+    layer_y = []
+
+    n = 0
+    for shift_x in dir_x:
+        for shift_y in dir_y:
+
+            cond_0 = (shift_x == 0 and shift_y == 0) | (shift_x == 1 and shift_y == 1) | (shift_x == -1 and shift_y == -1) | (shift_x == 1 and shift_y == -1) | (shift_x == -1 and shift_y == 1)
+
+            if not cond_0:
+
+                layer_x.append(shift_x)
+                layer_y.append(shift_y)
+                weights_gradients[1 + shift_y, 1 + shift_x, n] = -1 # y first, x then because of the initial grid being like this
+                n = n + 1
+
+    # make a dataset with it to remember the associated shift_x and shift_y
+    xr_weights = xr.DataArray(data=weights_gradients, dims=['y0', 'x0', 'direction'], coords={'direction': np.arange(4)})
+    ds_weights = xr.Dataset(data_vars={'weights': xr_weights})
+    ds_weights['shift_x'] = xr.DataArray(data=np.array(layer_x), dims=['direction'])
+    ds_weights['shift_y'] = xr.DataArray(data=np.array(layer_y), dims=['direction'])
+    return ds_weights
+
+
 def first_criterion_lazero(kisf, plume_var_of_int, ice_draft_neg_isf, isf_and_GL_mask, ds_weights, dx, dy):
 
     """
@@ -795,7 +837,7 @@ def lazero_GL_alpha_kisf_newmethod(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL_
     return np.arctan(sn_new), -1*GL_neighbors_new
 
 
-def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL_mask, dist_incl, weights8_0, weights16_0, mid_coord, sn_isf, first_crit, sn_isf_corr, first_crit_corr):
+def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL_mask, gl_mask_isl, dist_incl, weights8_0, weights16_0, mid_coord, sn_isf, first_crit, sn_isf_corr, first_crit_corr):
     """
     
     This function computes the plume departing grounding line depth and the local angle in a smoother manner than Lazeroms et al. 2018. 
@@ -835,6 +877,8 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
         
     # Cut out the GL band in draft depth
     GL_depth_isf = -1*(ice_draft_neg_isf.where(GL_2_mask))
+    
+
 
     # Initialise the field at grounding line
     GL_neighbors_new = GL_depth_isf
@@ -897,21 +941,89 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
 
             second_crit_all = second_crit_all.where(second_crit_all > 0,second_crit_n)   
 
+        if diff_stop == 2:
+            
+            # cut out areas that are nan and potentially are near a grounding line of an island
+            start_new_GL = (gl_mask_isl) & ~(GL_neighbors_new > 0) & ~(plume_var_of_int['GL_mask'] == kisf) & (isf_and_GL_mask == kisf)
+            
+            GL_neighbors_new2 = -1*(ice_draft_neg_isf.where(start_new_GL))
+            sn_new2 = sn_isf.where(first_crit).mean('direction')
+            sn_new2 = sn_new2.where(sn_new2 > 0,0).where(start_new_GL > 0)
+            second_crit_all2 = GL_neighbors_new2 * 0 + 1
+            
+            mask_old_domain2 = np.isnan(GL_neighbors_new2)
+            
+            diff_masks2 = 1
 
+            for n in range(30):
+
+                GL_neighbors = xr_nd_corr(GL_neighbors_new2, weights16_0['weights'])
+
+                # cut out the newly formed data strip
+                GL_neighbors_step = GL_neighbors.where(np.isnan(GL_neighbors_new2))
+                GL_neighbors_step = GL_neighbors_step.where(isf_and_GL_mask == kisf)
+
+                # check if the propagated GL is deeper than point
+                diff_base_GL = (-1*ice_draft_neg_isf - GL_neighbors_step)
+                second_crit_n = diff_base_GL < 0 #<=
+
+                # combine this criterion and the slope criterion
+                all_crit =  first_crit & second_crit_n #
+                
+                if diff_masks2 != 0 :
+                    # make a mean over all valid GL depths
+                    GL_mean = GL_neighbors_step.where(all_crit).mean('direction')
+                    GL_neighbors_new2 = GL_neighbors_new2.where(GL_neighbors_new2 > 0,GL_mean)    
+
+                    # make a mean over all valid slopes
+                    sn_mean = sn_isf.where(all_crit).mean('direction')
+                    sn_new2 = sn_new2.where(sn_new2 > 0,sn_mean)
+
+                    second_crit_all2 = second_crit_all2.where(second_crit_all2 > 0,second_crit_n)   
+                    mask_new_domain2 = np.isnan(GL_neighbors_new2)
+                    diff_masks2 = (mask_new_domain2.astype(int) - mask_old_domain2.astype(int)).sum().values
+                    
+                else:
+                
+                    # insert corrected sn and first crit
+                    first_crit_corr2 = first_crit.where((all_crit.sum('direction') > 0), first_crit_corr)
+                    all_crit_corr = (first_crit_corr2 & second_crit_n).where(np.isfinite(GL_neighbors_step))
+                    sn_isf_corr2 = sn_isf.where((all_crit.sum('direction') > 0), sn_isf_corr).where(np.isfinite(GL_neighbors_step))
+
+                    # make a mean over all valid GL depths
+                    GL_mean = GL_neighbors_step.where(all_crit_corr).mean('direction')
+                    GL_neighbors_new2 = GL_neighbors_new2.where(GL_neighbors_new2 > 0,GL_mean)    
+
+                    # make a mean over all valid slopes
+                    sn_mean = sn_isf_corr2.where(all_crit_corr).mean('direction')
+                    sn_new2 = sn_new2.where(sn_new2 > 0,sn_mean)
+
+                    second_crit_all2 = second_crit_all2.where(second_crit_all2 > 0,second_crit_n)   
+                
+            # fill nans with this new product
+            GL_neighbors_new = GL_neighbors_new.where(np.isfinite(GL_neighbors_new), GL_neighbors_new2)
+            
         # check if we still have obstacles
         mask_new_domain = np.isnan(GL_neighbors_new)
         diff_masks = (mask_new_domain.astype(int) - mask_old_domain.astype(int)).sum().values
 
         # check if we have reached the maximum
         diff_mask_isf = np.isnan(GL_neighbors_new) & (isf_and_GL_mask == kisf)
-
+        
         if diff_masks == 0:
             #print('mask did not change', diff_stop)
             diff_stop = diff_stop+1
+                    
+        i = i+1
+        
+        if i == 500:
+            return  np.arctan(sn_new), -1*GL_neighbors_new
+            break
+        
             
     return  np.arctan(sn_new), -1*GL_neighbors_new
 
-def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, dir_nb, grad_corr, extra_shift):
+def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, dir_nb, grad_corr, extra_shift, dist_incl):
 
     """
     Compute zGL and alphas with a revisitation of the Lazeroms approach.
@@ -963,12 +1075,12 @@ def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx
 
 
     # second crit and zGL and alpha
-    alpha_kisf, zGL_kisf = lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, plume_var_of_int['GL_mask'], isf_and_GL_mask, 1, weights8_0, weights16_0, 200, sn_isf, first_crit, sn_isf_corr, first_crit_corr)
+    alpha_kisf, zGL_kisf = lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, plume_var_of_int['GL_mask'], isf_and_GL_mask, plume_var_of_int['GL_mask_with_isl'], dist_incl, weights8_0, weights16_0, 200, sn_isf, first_crit, sn_isf_corr, first_crit_corr)
     #alpha_kisf = alpha_kisf.where(alpha_kisf < 0, 0).where(np.isfinite(isf_and_GL_mask))
     #zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf).where(np.isfinite(isf_and_GL_mask))
     
     alpha_kisf = alpha_kisf.where(np.isfinite(alpha_kisf), 0)
-    zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg)
+    zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf)
     
     go_back_to_whole_grid_alpha = alpha_kisf.reindex_like(plume_var_of_int['ISF_mask'])
     go_back_to_whole_grid_zgl = zGL_kisf.reindex_like(plume_var_of_int['ISF_mask'])   
@@ -1020,7 +1132,7 @@ def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):
 
     return go_back_to_whole_grid_local_alpha
 
-def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir_nb=16, extra_shift=2):
+def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir_nb=16, extra_shift=2, dist_incl=0):
 
     """
     Compute grounding line and angle for the plume for all ice shelves.
@@ -1062,12 +1174,18 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
     elif opt == 'lazero':
         print('----------- PREPARATION OF ZGL AND ALPHA WITH LAZEROMS 2018 -----------')
 
-    elif opt == 'new lazero':
+    elif opt == 'new_lazero':
         print('----------- PREPARATION OF ZGL AND ALPHA WITH MODIFIED LAZEROMS 2018 -----------')
     
     elif opt == 'local':     
         print('----------- PREPARATION OF ZGL AND ALPHA WITH APPENDIX B FAVIER-----------')
-
+    
+    
+    weights4 = create_4_dir_weights()
+    mask_0_1_2 = plume_var_of_int['ISF_mask'].where(plume_var_of_int['ISF_mask'] < 2,2)
+    corr_mask = xr_nd_corr(mask_0_1_2, weights4['weights'])
+    corr_mask_max = np.abs(corr_mask).max('direction')
+    plume_var_of_int['GL_mask_with_isl'] = (corr_mask_max == 2)
         
     for kisf in tqdm(plume_var_of_int['Nisf']):
         if ~np.isnan(plume_var_of_int['GL_mask'].where(plume_var_of_int['GL_mask'] == kisf).max()):
@@ -1075,7 +1193,7 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
             if opt == 'lazero':
                 alpha, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
             elif opt == 'new_lazero':
-                alpha, zGL = compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, grad_corr, dir_nb, extra_shift)
+                alpha, zGL = compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, grad_corr, dir_nb, extra_shift, dist_incl)
             elif opt == 'local':
                 alpha0, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
                 alpha = compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
@@ -1091,7 +1209,7 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
 
 
     
-def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int, grad_corr=0, dir_nb=16, extra_shift=2):
+def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int, grad_corr=0, dir_nb=16, extra_shift=2, dist_incl=0):
 
     """
     Overall function to compute the plume characteristics depending on geometry.
@@ -1117,7 +1235,7 @@ def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int, g
     plume_var_of_int = prepare_plume_dataset(plume_var_of_int,plume_param_options)
     
     for opt in plume_param_options: 
-        alpha, zGL = compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr, dir_nb, extra_shift)
+        alpha, zGL = compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr, dir_nb, extra_shift, dist_incl)
         plume_var_of_int['alpha'].loc[dict(option=opt)] = alpha
         plume_var_of_int['zGL'].loc[dict(option=opt)] = zGL
            
