@@ -418,7 +418,7 @@ def def_ground_mask(file_msk, dist, add_fac):
     
     return mask_ground
 
-def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy):
+def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, AlexIslandisf):
     
     """
     Identify grounding line points and assign ice shelf ID to these points. 
@@ -568,8 +568,10 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy):
             
     
         mask_gline_new = larger_region.where(cut_gline>0).reindex_like(mask_gline_orig)
-        mask_gline_final = mask_gline_orig.where(mask_gline_new != 54, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Bach', drop=True).values[0] (54)
-        mask_gline_final = mask_gline_final.where(mask_gline_new != 75, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Wilkins', drop=True).values[0] (75)
+        
+        for kisf in AlexIslandisf:
+            mask_gline_final = mask_gline_orig.where(mask_gline_new != kisf, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Bach', drop=True).values[0] (54)
+        #mask_gline_final = mask_gline_final.where(mask_gline_new != 75, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Wilkins', drop=True).values[0] (75)
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 9, mask_gline_new) # only with Nico mask
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 98, mask_gline_new) # only with Nico mask - Verdi
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 99, mask_gline_new) # only with Nico mask - Brahms
@@ -690,7 +692,7 @@ def def_pinning_point_boundaries(mask_pin, new_mask):
 #outfile.to_netcdf(outputpath+'all_masks.nc','w')
 
 
-def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one=True, mouginot_basins=False, variable_geometry=False, ground_point='yes', write_ismask = 'yes', write_groundmask = 'yes', dist=150, add_fac=100, connectivity=4, threshold=4):
+def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one=True, mouginot_basins=False, variable_geometry=False, ground_point='yes', write_ismask = 'yes', write_groundmask = 'yes', dist=150, add_fac=100, connectivity=4, threshold=4, AlexIslandisf=[54,75]):
  
     """
     Identify the location of ice shelves, Antarctic mainland, grounding lines, ice fronts and pinning points. 
@@ -796,10 +798,12 @@ def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file,
             new_mask_file = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc')
             #new_mask = new_mask_file['ls_mask012']
             new_mask = new_mask_file['mask']
+            new_mask_info = new_mask
         else:
             new_mask = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc', chunks={'x': chunked, 'y': chunked})
             #new_mask = new_mask_file['ls_mask012']
             new_mask = new_mask_file['mask']
+            new_mask_info = new_mask
     
     
     ### Find out what grounded ice is on the main continent (2) and what is islands and pinning points (0)
@@ -828,7 +832,7 @@ def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file,
     print('Define grounding line')
     print('Grounding line is the first point on the ground:', ground_point)
 
-    mask_gline = def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy)
+    mask_gline = def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, AlexIslandisf)
 
     ### Define the front
 
@@ -1383,7 +1387,7 @@ def compute_distance_GL_IF_ISF(whole_ds):
     return whole_ds
 
 
-def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, file_metadata_GL_flux, ground_point, FRIS_one=True, mouginot_basins=False, variable_geometry=False, write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', dist=150, add_fac=100, connectivity=4, threshold=4, write_metadata = 'yes'):
+def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_conc, chunked, latlonboundary_file, outputpath, file_metadata, file_metadata_GL_flux, ground_point, FRIS_one=True, mouginot_basins=False, variable_geometry=False, write_ismask = 'yes', write_groundmask = 'yes', write_outfile='yes', dist=150, add_fac=100, connectivity=4, threshold=4, write_metadata = 'yes', AlexIslandisf = [54,75]):
     
     """
     Create mask and metadata file for all ice shelves. 
@@ -1443,11 +1447,12 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
     print('--------- PREPARE THE MASKS --------------')
     if write_outfile == 'yes':
         if mouginot_basins:
-            outfile, new_mask_info = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold)
+            outfile, new_mask_info = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold,
+                                                     AlexIslandisf)
             outfile.to_netcdf(outputpath + 'outfile.nc', 'w')
             new_mask_info.to_netcdf(outputpath + 'new_mask_info.nc', 'w')
         else:
-            outfile = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold)
+            outfile = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold, AlexIslandisf)
             outfile.to_netcdf(outputpath + 'outfile.nc', 'w')
     else:
         outfile = xr.open_dataset(outputpath + 'outfile.nc')
