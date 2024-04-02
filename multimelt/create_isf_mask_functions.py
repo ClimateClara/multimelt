@@ -369,8 +369,8 @@ def def_ground_mask(file_msk, dist, add_fac):
     meshx_gnd_da = mask_gnd.copy(data=np.broadcast_to(meshx_gnd, mask_gnd.shape))
     meshy_gnd_da = mask_gnd.copy(data=np.broadcast_to(meshy_gnd, mask_gnd.shape))
     
-    dx = abs(meshx_gnd_da.x[2] - meshx_gnd_da.x[1])
-    dy = abs(meshx_gnd_da.y[2] - meshx_gnd_da.y[1])
+    dx = abs(meshx_gnd_da.x[5] - meshx_gnd_da.x[4])
+    dy = abs(meshx_gnd_da.y[5] - meshx_gnd_da.y[4])
     
     max_len_xy = max(len(meshx_gnd_da.x),len(meshx_gnd_da.y))
     half_range = round(max_len_xy/2)
@@ -569,8 +569,9 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, Ale
     
         mask_gline_new = larger_region.where(cut_gline>0).reindex_like(mask_gline_orig)
         
+        mask_gline_final = mask_gline_orig.copy()
         for kisf in AlexIslandisf:
-            mask_gline_final = mask_gline_orig.where(mask_gline_new != kisf, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Bach', drop=True).values[0] (54)
+            mask_gline_final = mask_gline_final.where(mask_gline_new != kisf, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Bach', drop=True).values[0] (54)
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 75, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Wilkins', drop=True).values[0] (75)
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 9, mask_gline_new) # only with Nico mask
         #mask_gline_final = mask_gline_final.where(mask_gline_new != 98, mask_gline_new) # only with Nico mask - Verdi
@@ -800,7 +801,7 @@ def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file,
             new_mask = new_mask_file['mask']
             new_mask_info = new_mask
         else:
-            new_mask = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc', chunks={'x': chunked, 'y': chunked})
+            new_mask_file = xr.open_mfdataset(outputpath + 'preliminary_mask_file.nc', chunks={'x': chunked, 'y': chunked})
             #new_mask = new_mask_file['ls_mask012']
             new_mask = new_mask_file['mask']
             new_mask_info = new_mask
@@ -930,102 +931,114 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
     
     #if mouginot_basins:
     #    new_mask = new_mask['mask']
-        
-    ### Name, Area, Numbers from Rignot et al. 2013
-    ismask_info = []
-    file1 = open(file_metadata, 'r')
-    Lines = file1.readlines()
-    for ll in Lines:
-        # print(ll)
-        if ll[0] != '!':
-            is_nb0 = int(ll[9:12])
-            is_name = ll[17:36].strip()
-            is_region = ll[56:75].strip()
-            is_melt_rate = float(ll[94:100])
-            is_melt_unc = float(ll[124:129])
-            if ll[-2] == ';' or ll[132] == '!' or ll[132] == ' ':
-                is_area = np.nan
-            else:
-                is_area = float(ll[148:155])
-            if is_area == 1.:
-                is_area = np.nan
-                
-            if mouginot_basins:
-                if new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True):
-                    is_nb1 = new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True).values[0].astype(int)
-                    ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-                elif is_name == 'Ross':
-                    is_nb1 = 59
-                    ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-                elif is_name == 'Filchner':
-                    is_nb1 = 105
-                    ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
-                elif is_name == 'Ronne':
-                    is_nb1 = 104
-                    ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
-                #else:
-                #    ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-            else:
-                ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-
-    arr_ismask_info = np.array(ismask_info)
     
-    df = pd.DataFrame(arr_ismask_info[:, 1:6], index=arr_ismask_info[:, 0].astype(int),
-                      columns=['isf_name', 'region', 'isf_melt', 'melt_uncertainty',
-                               'isf_area_rignot'])        
+    ########################################################### IF WE HAVE THIS INFO
+    if file_metadata[-3::] == 'txt':
+        ### Name, Area, Numbers from Rignot et al. 2013
+        ismask_info = []
+        file1 = open(file_metadata, 'r')
+        Lines = file1.readlines()
+        for ll in Lines:
+            # print(ll)
+            if ll[0] != '!':
+                is_nb0 = int(ll[9:12])
+                is_name = ll[17:36].strip()
+                is_region = ll[56:75].strip()
+                is_melt_rate = float(ll[94:100])
+                is_melt_unc = float(ll[124:129])
+                if ll[-2] == ';' or ll[132] == '!' or ll[132] == ' ':
+                    is_area = np.nan
+                else:
+                    is_area = float(ll[148:155])
+                if is_area == 1.:
+                    is_area = np.nan
 
-    df['isf_melt'] = df['isf_melt'].astype(float)
-    df['melt_uncertainty'] = df['melt_uncertainty'].astype(float)
-    df['isf_area_rignot'] = df['isf_area_rignot'].astype(float)
-    
-    if FRIS_one and not mouginot_basins:
+                if mouginot_basins:
+                    if new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True):
+                        is_nb1 = new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True).values[0].astype(int)
+                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+                    elif is_name == 'Ross':
+                        is_nb1 = 59
+                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+                    elif is_name == 'Filchner':
+                        is_nb1 = 105
+                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
+                    elif is_name == 'Ronne':
+                        is_nb1 = 104
+                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
+                    #else:
+                    #    ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+                else:
+                    ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
 
-        df['isf_name'].loc[11] = 'Filchner-Ronne'
-        df['isf_melt'].loc[11] = df['isf_melt'].loc[11] + df['isf_melt'].loc[21]
-        df['melt_uncertainty'].loc[11] = df['melt_uncertainty'].loc[11] + df['melt_uncertainty'].loc[21] # this might be a bit dodgy to add the uncertainties?
-        df['isf_area_rignot'].loc[11] = df['isf_area_rignot'].loc[11] + df['isf_area_rignot'].loc[21] 
-        df = df.drop(21)
-    
-    elif mouginot_basins:        
-        
-        df['isf_name'].loc[104] = 'Filchner-Ronne'
-        df['isf_melt'].loc[104] = df['isf_melt'].loc[104] + df['isf_melt'].loc[105]
-        df['melt_uncertainty'].loc[104] = df['melt_uncertainty'].loc[104] + df['melt_uncertainty'].loc[105] # this might be a bit dodgy to add the uncertainties?
-        df['isf_area_rignot'].loc[104] = df['isf_area_rignot'].loc[104] + df['isf_area_rignot'].loc[105] 
-        df = df.drop(105)
+        arr_ismask_info = np.array(ismask_info)
+
+        df = pd.DataFrame(arr_ismask_info[:, 1:6], index=arr_ismask_info[:, 0].astype(int),
+                          columns=['isf_name', 'region', 'isf_melt', 'melt_uncertainty',
+                                   'isf_area_rignot'])        
+
+        df['isf_melt'] = df['isf_melt'].astype(float)
+        df['melt_uncertainty'] = df['melt_uncertainty'].astype(float)
+        df['isf_area_rignot'] = df['isf_area_rignot'].astype(float)
+
+        if FRIS_one and not mouginot_basins:
+
+            df['isf_name'].loc[11] = 'Filchner-Ronne'
+            df['isf_melt'].loc[11] = df['isf_melt'].loc[11] + df['isf_melt'].loc[21]
+            df['melt_uncertainty'].loc[11] = df['melt_uncertainty'].loc[11] + df['melt_uncertainty'].loc[21] # this might be a bit dodgy to add the uncertainties?
+            df['isf_area_rignot'].loc[11] = df['isf_area_rignot'].loc[11] + df['isf_area_rignot'].loc[21] 
+            df = df.drop(21)
+
+        elif mouginot_basins:        
+
+            df['isf_name'].loc[104] = 'Filchner-Ronne'
+            df['isf_melt'].loc[104] = df['isf_melt'].loc[104] + df['isf_melt'].loc[105]
+            df['melt_uncertainty'].loc[104] = df['melt_uncertainty'].loc[104] + df['melt_uncertainty'].loc[105] # this might be a bit dodgy to add the uncertainties?
+            df['isf_area_rignot'].loc[104] = df['isf_area_rignot'].loc[104] + df['isf_area_rignot'].loc[105] 
+            df = df.drop(105)
+    ###########################################################
     
     ### Compute area from our data
-    if mouginot_basins:
-        is_mask = new_mask['mask'].where(new_mask['mask']>1)
-    else:
-        is_mask = new_mask.where(new_mask>1)
-        
-    idx_da = xr.DataArray(data=df.index, dims=['Nisf']).chunk({'Nisf':1})
+    #if mouginot_basins:
+    #    is_mask = new_mask['mask'].where(new_mask['mask']>1)
+    #else:
+    is_mask = new_mask.where(new_mask>1)
     
+    if file_metadata[-3::] == 'txt':
+        idx_da = xr.DataArray(data=df.index, dims=['Nisf']).chunk({'Nisf':1})
+    else:
+        group_key = is_mask.groupby(is_mask).groups
+        idx_da = xr.DataArray(data=np.array(list((group_key.keys()))).astype(int), dims=['Nisf']).chunk({'Nisf': 1})
+        idx_da = idx_da.where(idx_da > 1, drop=True)
+        
+        df = pd.DataFrame(index=idx_da.values)
     
     if 'time' not in file_conc.dims:    
         df['isf_area_here'] = file_conc.chunk({'x':1000,'y':1000}).where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
-
-    ### Correct melt numbers using our area
-    df1 = df.sort_index()
-        #print('here 1')
-        
-    if 'time' not in file_conc.dims: 
-        df1['isf_melt'] = df1['isf_melt'] * df1['isf_area_here'] / df1['isf_area_rignot']
-        #print('here 2')
-        df1['melt_uncertainty'] = df1['melt_uncertainty'] * df1['isf_area_here'] / df1['isf_area_rignot']
-        #print('here 3')
-        df1['ratio_isf_areas'] = df1['isf_area_here'] / df1['isf_area_rignot']
-        #print('here 4')
     
-    # add grounding line flux as given by Rignot et al 2013
-    GL_flux_pd = pd.read_csv(file_metadata_GL_flux, delimiter=';').dropna(how='all',axis=1).dropna(how='any',axis=0)
-    df1['GL_flux'] = np.nan
-    if not mouginot_basins:
-        for idx_gl in GL_flux_pd.index:
-            for idx in df1.index:
-                if df1['isf_name'].loc[idx] == GL_flux_pd['Ice Shelf Name'].loc[idx_gl]:
-                    df1['GL_flux'].loc[idx] = float(GL_flux_pd['Grounding line flux'].loc[idx_gl])
+    df1 = df.sort_index()
+    
+    ########################################################### IF WE HAVE THIS INFO
+    if file_metadata[-3::] == 'txt':
+        ### Correct melt numbers using our area
+
+        if 'time' not in file_conc.dims: 
+            df1['isf_melt'] = df1['isf_melt'] * df1['isf_area_here'] / df1['isf_area_rignot']
+            #print('here 2')
+            df1['melt_uncertainty'] = df1['melt_uncertainty'] * df1['isf_area_here'] / df1['isf_area_rignot']
+            #print('here 3')
+            df1['ratio_isf_areas'] = df1['isf_area_here'] / df1['isf_area_rignot']
+            #print('here 4')
+
+        # add grounding line flux as given by Rignot et al 2013
+        GL_flux_pd = pd.read_csv(file_metadata_GL_flux, delimiter=';').dropna(how='all',axis=1).dropna(how='any',axis=0)
+        df1['GL_flux'] = np.nan
+        if not mouginot_basins:
+            for idx_gl in GL_flux_pd.index:
+                for idx in df1.index:
+                    if df1['isf_name'].loc[idx] == GL_flux_pd['Ice Shelf Name'].loc[idx_gl]:
+                        df1['GL_flux'].loc[idx] = float(GL_flux_pd['Grounding line flux'].loc[idx_gl])
+    ###########################################################
 
     return df1
 
@@ -1061,7 +1074,7 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
     """ 
     
     file_draft = file_draft.where(file_draft<0,0)
-    
+
     idx_da = xr.DataArray(data=df1.index, dims=['Nisf']).chunk({'Nisf': 1})
 
     if 'time' in mask_front.dims:
@@ -1093,7 +1106,7 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
         return ds_clean
 
     else:
-
+        
         #print('here 7')
         df1['front_bot_depth_max'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).min(['x','y'])
         df1['front_bot_depth_avg'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).mean(['x','y'])
@@ -1224,25 +1237,34 @@ def combine_mask_metadata(df1, outfile, ds_time=False):
         whole_ds = whole_ds.merge(ds_time)
 
     whole_ds['Nisf'].attrs['standard_name'] = 'ice shelf ID'
-    whole_ds['isf_name'].attrs['standard_name'] = 'ice shelf name'
-    whole_ds['region'].attrs['standard_name'] = 'region'
-    whole_ds['region'].attrs['long_name'] = 'Region name'
-    whole_ds['isf_melt'].attrs['standard_name'] = 'ice shelf melt'
-    whole_ds['isf_melt'].attrs['units'] = 'Gt/yr'
-    whole_ds['melt_uncertainty'].attrs['standard_name'] = 'melt uncertainty'
-    whole_ds['melt_uncertainty'].attrs['units'] = 'Gt/yr'
-    whole_ds['isf_area_rignot'].attrs['standard_name'] = 'ice shelf area Rignot'
-    whole_ds['isf_area_rignot'].attrs['units'] = 'km^2'
-    whole_ds['isf_area_rignot'].attrs['long_name'] = 'Ice shelf area in Rignot et al 2013'
+    
+    if 'isf_name' in whole_ds.keys():
+        whole_ds['isf_name'].attrs['standard_name'] = 'ice shelf name'
+    if 'region' in whole_ds.keys():
+        whole_ds['region'].attrs['standard_name'] = 'region'
+        whole_ds['region'].attrs['long_name'] = 'Region name'
+    if 'isf_melt' in whole_ds.keys():
+        whole_ds['isf_melt'].attrs['standard_name'] = 'ice shelf melt'
+        whole_ds['isf_melt'].attrs['units'] = 'Gt/yr'
+    if 'melt_uncertainty' in whole_ds.keys():
+        whole_ds['melt_uncertainty'].attrs['standard_name'] = 'melt uncertainty'
+        whole_ds['melt_uncertainty'].attrs['units'] = 'Gt/yr'
+    if 'isf_area_rignot' in whole_ds.keys():
+        whole_ds['isf_area_rignot'].attrs['standard_name'] = 'ice shelf area Rignot'
+        whole_ds['isf_area_rignot'].attrs['units'] = 'km^2'
+        whole_ds['isf_area_rignot'].attrs['long_name'] = 'Ice shelf area in Rignot et al 2013'
     whole_ds['isf_area_here'].attrs['standard_name'] = 'our ice shelf area'
     whole_ds['isf_area_here'].attrs['units'] = 'km^2'
     whole_ds['isf_area_here'].attrs['long_name'] = 'Ice shelf area computed from our mask'
+    
     #whole_ds['ratio_isf_areas'].attrs['standard_name'] = 'ratio isf area here/Rignot'
     #whole_ds['ratio_isf_areas'].attrs['units'] = '-'
     #whole_ds['ratio_isf_areas'].attrs['long_name'] = 'Ratio between ice shelf area computed from our mask and area from Rignot et al 2013'
-    whole_ds['GL_flux'].attrs['standard_name'] = 'grounding_line_flux'
-    whole_ds['GL_flux'].attrs['units'] = 'Gt/yr'
-    whole_ds['GL_flux'].attrs['long_name'] = 'Flux across grounding line from Rignot et al 2013'
+    
+    if 'GL_flux' in whole_ds.keys():
+        whole_ds['GL_flux'].attrs['standard_name'] = 'grounding_line_flux'
+        whole_ds['GL_flux'].attrs['units'] = 'Gt/yr'
+        whole_ds['GL_flux'].attrs['long_name'] = 'Flux across grounding line from Rignot et al 2013'
     whole_ds['front_bot_depth_max'].attrs['standard_name'] = 'max depth between isf front and ocean bottom'
     whole_ds['front_bot_depth_max'].attrs['units'] = 'm'
     whole_ds['front_bot_depth_max'].attrs['long_name'] = 'Maximum depth between the ice shelf front and ocean bottom'
@@ -1447,8 +1469,7 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
     print('--------- PREPARE THE MASKS --------------')
     if write_outfile == 'yes':
         if mouginot_basins:
-            outfile, new_mask_info = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold,
-                                                     AlexIslandisf)
+            outfile, new_mask_info = create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file, outputpath, chunked, dx, dy, FRIS_one, mouginot_basins, variable_geometry, ground_point, write_ismask, write_groundmask, dist, add_fac, connectivity, threshold, AlexIslandisf)
             outfile.to_netcdf(outputpath + 'outfile.nc', 'w')
             new_mask_info.to_netcdf(outputpath + 'new_mask_info.nc', 'w')
         else:
