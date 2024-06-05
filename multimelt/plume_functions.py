@@ -1002,6 +1002,7 @@ def lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, GL_mask, isf_and_GL
                 
             # fill nans with this new product
             GL_neighbors_new = GL_neighbors_new.where(np.isfinite(GL_neighbors_new), GL_neighbors_new2)
+            sn_new = sn_new.combine_first(sn_new2)
             
         # check if we still have obstacles
         mask_new_domain = np.isnan(GL_neighbors_new)
@@ -1055,10 +1056,18 @@ def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx
     
     weights8 = create_8_dir_weights()
     weights16 = create_16_dir_weights()
-    if extra_shift == 2:
-        weights16_across = create_16_dir_weights_across()
-    elif extra_shift == 1:
-        weights16_across = create_16_dir_weights()
+    
+    if dir_nb == 16:
+        if extra_shift == 2:
+            weights_across = create_16_dir_weights_across()
+        elif extra_shift == 1:
+            weights_across = create_16_dir_weights()
+    elif dir_nb == 8:
+        if extra_shift == 2:
+            weights_across = create_8_dir_weights_across()
+        elif extra_shift == 1:
+            weights_across = create_8_dir_weights()   
+
 
     weights8_0 = weights8.where(weights8 < 0,0) * -1
     weights8_0 = weights8_0.where(weights8_0 > 0,0)
@@ -1074,15 +1083,15 @@ def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx
     ice_draft_neg_isf = ice_draft_neg.where(isf_and_GL_mask == kisf)
 
     # first crit        
-    sn_isf, sn_isf_corr, first_crit, first_crit_corr = first_criterion_lazero_general(kisf, plume_var_of_int, ice_draft_neg_isf, isf_and_GL_mask, weights16_across, dx, dy, dir_nb=dir_nb, grad_corr=grad_corr, extra_shift=extra_shift) 
+    sn_isf, sn_isf_corr, first_crit, first_crit_corr = first_criterion_lazero_general(kisf, plume_var_of_int, ice_draft_neg_isf, isf_and_GL_mask, weights_across, dx, dy, dir_nb=dir_nb, grad_corr=grad_corr, extra_shift=extra_shift) 
 
     # second crit and zGL and alpha
     alpha_kisf, zGL_kisf = lazero_GL_alpha_kisf_newmethod2(kisf, ice_draft_neg_isf, plume_var_of_int['GL_mask'], isf_and_GL_mask, plume_var_of_int['GL_mask_with_isl'], dist_incl, weights8_0, weights16_0, 200, sn_isf, first_crit, sn_isf_corr, first_crit_corr)
     #alpha_kisf = alpha_kisf.where(alpha_kisf < 0, 0).where(np.isfinite(isf_and_GL_mask))
     #zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf).where(np.isfinite(isf_and_GL_mask))
     
-    alpha_kisf = alpha_kisf.where(np.isfinite(alpha_kisf), 0)
-    zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf)
+    #alpha_kisf = alpha_kisf.where(np.isfinite(alpha_kisf), 0)
+    #zGL_kisf = zGL_kisf.where(np.isfinite(zGL_kisf), ice_draft_neg_isf)
     
     go_back_to_whole_grid_alpha = alpha_kisf.reindex_like(plume_var_of_int['ISF_mask'])
     go_back_to_whole_grid_zgl = zGL_kisf.reindex_like(plume_var_of_int['ISF_mask'])   
@@ -1195,7 +1204,7 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
             if opt == 'lazero':
                 alpha, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
             elif opt == 'new_lazero':
-                alpha, zGL = compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, grad_corr, dir_nb, extra_shift, dist_incl)
+                alpha, zGL = compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx, dy, dir_nb, grad_corr, extra_shift, dist_incl)
             elif opt == 'local':
                 alpha0, zGL = compute_zGL_alpha_lazero(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
                 alpha = compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy)
