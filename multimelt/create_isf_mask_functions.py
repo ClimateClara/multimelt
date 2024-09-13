@@ -791,8 +791,8 @@ def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file,
         new_mask.to_netcdf(outputpath + 'preliminary_mask_file.nc', 'w')
         
         new_mask_info = new_mask
-        if mouginot_basins:
-            new_mask = new_mask['mask']
+        #if mouginot_basins:
+        #    new_mask = new_mask['mask']
     else:
         print('read in from netcdf')
         if not chunked:
