@@ -77,7 +77,7 @@ def def_isf_mask(arr_def_ismask, file_msk, file_conc, lon, lat, FRIS_one=True,
     FRIS_one : Boolean 
         If True, Filchner-Ronne are considered as one ice-shelf
     mouginot_basins : Boolean 
-        If True, arr_def_ismask is an xr.DataArray with drainage basins
+        If True, arr_def_ismask is an xr.DataArray with ice shelves based on drainage basins (subdivisions of IMBIE basins, done by J. Mouginot), needs to contain variables 'Iceshelf_extrap' and 'ID_IMBIE' and coordinate 'Nisf', not appropriate for changing geometry
     variable_geometry : Boolean 
         If True, arr_def_ismask
     connectivity : int
@@ -93,103 +93,38 @@ def def_isf_mask(arr_def_ismask, file_msk, file_conc, lon, lat, FRIS_one=True,
     
     if mouginot_basins:
         
-        isf_mask = file_msk.copy()
+        ###### HOW I DID IT FOR SUMMER PAPER ####
+        #isf_mask = file_msk.copy()
+        ## only ice shelves
+        #isf_only_mask = file_conc > 0
+        
+        
+        ## assign ID for basins
+        #isf_mask_ID_IMBIE = arr_def_ismask['Iceshelf_extrap'].where(arr_def_ismask['Iceshelf_extrap'] == arr_def_ismask.ID_IMBIE).sum('Nisf').where(isf_only_mask)
+        #isf_mask_ID_IMBIE = isf_mask_ID_IMBIE.where(isf_mask_ID_IMBIE > 0)
+
+        #isf_mask_Nisf = isf_mask_ID_IMBIE * 0
+        #for kisf in arr_def_ismask.Nisf:
+        #    isf_mask_Nisf = isf_mask_Nisf.where(isf_mask_ID_IMBIE != arr_def_ismask.ID_IMBIE.sel(Nisf=kisf), kisf)
+        
+        ## creating the mask
+        #new_mask = isf_mask_Nisf.copy()
+        #new_mask = new_mask.where(file_msk != 0, 1).where(file_msk != 2, 0)
+        #new_mask = new_mask.where(np.isfinite(new_mask), 500)
+        ####### ^ HOW I DID IT FOR SUMMER PAPER ####
+        
+        # combine ERoss and WRoss, Filchner and Ronne
+        new_mask_IMBIE_extrap = arr_def_ismask['Iceshelf_extrap'].where(arr_def_ismask['Iceshelf_extrap'] != 67, 66) # combine Ross
+        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(new_mask_IMBIE_extrap != 125, 124) # combine FRIS
+
         # only ice shelves
-        isf_only_mask = file_conc > 0
+        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(file_conc > 0) # only where there is ice shelf
         
-        #find connected components
-        dusted = cc3d.dust(isf_only_mask.values.astype(np.int64), 
-                   threshold = threshold, 
-                   connectivity = connectivity, 
-                   in_place = False)
-        
-        labels_out = cc3d.connected_components(dusted, 
-                                       connectivity = connectivity)
-        
-        labelled = xr.DataArray(labels_out, 
-                        coords = {"y": file_conc.y, "x": file_conc.x}, 
-                        dims = ["y", "x"],
-                        name = "labels")
-        
-        # assign ID for basins
-        isf_mask_basins = arr_def_ismask['ID_isf'].where(isf_only_mask > 0)
-        # cut connected areas to area covered by basin stuff
-        labelled_isf = labelled.where(np.isfinite(isf_mask_basins))
-        
-        # creating the mask
-        new_mask = isf_mask_basins.copy()
-        
-        new_mask = new_mask.where(
-            new_mask != 58, 57).where(
-            new_mask != 151, 99).where(
-            new_mask != 109, 107).where(
-            new_mask != 116, 5).where(
-            new_mask != 143, 97).where(
-            new_mask != 137, 99)
-        
-                    
-        arr_def_ismask['name_isf'].loc[{'Nisf': 57}] = 'Ross'
-        arr_def_ismask['name_isf'].loc[{'Nisf': 58}] = np.nan
-        
-        if FRIS_one:
-            new_mask = new_mask.where(new_mask != 104, 103)
-            arr_def_ismask['name_isf'].loc[{'Nisf': 103}] = 'Filchner-Ronne'
-            arr_def_ismask['name_isf'].loc[{'Nisf': 104}] = np.nan
-
-        arr_def_ismask['name_isf'] = arr_def_ismask['name_isf'].dropna('Nisf')
-        
-        # do some fine-tuning for overlapping ice shelves   
-        problem_regions = [2,3,8,9,10,13,23,26,27,28,29,32,34,38,44,46,50,57,59,60,
-                   63,70,71,72,73,74,76,77,78,83,84,85,89,91,96,103]
-        
-        for conn_label in range(1,labels_out.max()):
-            basins_conn_domain = arr_def_ismask['ID_isf'].where(labelled_isf == conn_label, drop=True)
-            max_label = basins_conn_domain.max().values
-            min_label = basins_conn_domain.min().values
-            
-            # for areas with two labels in problem regions, take the one with the most points
-            if max_label != min_label:
-                groups_isf = basins_conn_domain.groupby(basins_conn_domain)
-                groups_labels = groups_isf.groups.keys()
-                if groups_isf.count().ID_isf.count() > 1:
-                    if any(x in problem_regions for x in list(groups_labels)):
-                        #print(conn_label)
-                        #print(min_label,max_label)
-                        dominant_isf = groups_isf.count().idxmax().values
-                        if dominant_isf == 12:
-                            dominant_isf = 14
-                        #print(dominant_isf)
-                        new_mask = new_mask.where(labelled_isf != conn_label, dominant_isf)
-            
-        # other fine-tuning: if an ice shelf is split, keep the largest connected domain
-        dx = abs(file_conc.x[1] - file_conc.x[0])
-        dy = abs(file_conc.y[1] - file_conc.y[0])
-
-        split_regions = [70,77,83,89,103] 
-
-        for rreg in split_regions:
-            # look where there are the same labels in several unconnected domains
-            labels_same = list(new_mask.groupby(labelled_isf).groups) * (new_mask.groupby(labelled_isf).median() == rreg)
-            labels_same = labels_same[labels_same>0]
-
-            area_before = 0
-            for conn_label in labels_same:
-                # compute the area of the different unconnected areas
-                conc_for_area = file_conc.where(labelled_isf == conn_label, drop=True)
-                area_now = (conc_for_area * dx * dy).sum()
-                if area_now >= area_before:
-                    area_before = area_now
-                    largest_label = conn_label
-
-            # set the smaller areas to 159
-            for small_label in (labels_same.where(labels_same != largest_label).dropna('labels')):
-                new_mask = new_mask.where(labelled_isf != small_label, 159)
-
-        new_mask = new_mask + 1
-        new_mask_info = arr_def_ismask.copy()
-        new_mask_info['Nisf'] = new_mask_info['Nisf'] + 1
-        
-        new_mask = new_mask.where(file_msk != 0, 1).where(file_msk != 2, 0)
+        # complete the mask with land and ocean
+        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(new_mask_IMBIE_extrap != 1, 134) # because 1 will be ocean
+        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(file_msk != 0, 1)
+        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(file_msk != 2, 0)
+        new_mask = new_mask_IMBIE_extrap.rename('mask')
     
     else:
         
@@ -329,13 +264,8 @@ def def_isf_mask(arr_def_ismask, file_msk, file_conc, lon, lat, FRIS_one=True,
                         new_mask = new_mask.where(labelled != conn_label, new_kisf)
     
     
-    if mouginot_basins:
-        mask_file = xr.merge([new_mask.rename('ISF_mask'), 
-                              new_mask_info['name_isf'], 
-                              new_mask_info['name_reg'], 
-                              new_mask_info['Nisf_orig']])
-    else:
-        mask_file = new_mask
+
+    mask_file = new_mask
     
     return mask_file
 
@@ -369,8 +299,8 @@ def def_ground_mask(file_msk, dist, add_fac):
     meshx_gnd_da = mask_gnd.copy(data=np.broadcast_to(meshx_gnd, mask_gnd.shape))
     meshy_gnd_da = mask_gnd.copy(data=np.broadcast_to(meshy_gnd, mask_gnd.shape))
     
-    dx = abs(meshx_gnd_da.x[5] - meshx_gnd_da.x[4])
-    dy = abs(meshx_gnd_da.y[5] - meshx_gnd_da.y[4])
+    dx = abs(meshx_gnd_da.x[2] - meshx_gnd_da.x[1])
+    dy = abs(meshx_gnd_da.y[2] - meshx_gnd_da.y[1])
     
     max_len_xy = max(len(meshx_gnd_da.x),len(meshx_gnd_da.y))
     half_range = round(max_len_xy/2)
@@ -899,6 +829,7 @@ def create_isf_masks(file_map, file_msk, file_conc, xx, yy, latlonboundary_file,
     else:
         return outfile
 
+
 def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy, new_mask, FRIS_one, mouginot_basins):
     
     """
@@ -929,11 +860,19 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
         DataFrame containing the following columns for each ice shelf: columns=['isf_name', 'region', 'isf_melt', 'melt_uncertainty','isf_area_rignot']
     """  
     
-    #if mouginot_basins:
-    #    new_mask = new_mask['mask']
-    
-    ########################################################### IF WE HAVE THIS INFO
-    if file_metadata[-3::] == 'txt':
+    if mouginot_basins:
+        
+        df = file_metadata.rename('isf_name').to_dataframe()
+        df.index.names = ['index']
+
+        ### Compute area from our data
+        is_mask = new_mask.where(new_mask>1)
+        idx_da = xr.DataArray(data=df.index, dims=['Nisf']).chunk({'Nisf':1})
+        df['isf_area_here'] = file_conc.chunk({'x':1000,'y':1000}).where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
+        df1 = df
+        
+    else:
+        
         ### Name, Area, Numbers from Rignot et al. 2013
         ismask_info = []
         file1 = open(file_metadata, 'r')
@@ -953,23 +892,9 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
                 if is_area == 1.:
                     is_area = np.nan
 
-                if mouginot_basins:
-                    if new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True):
-                        is_nb1 = new_mask.Nisf.where(new_mask['Nisf_orig'] == is_nb0, drop=True).values[0].astype(int)
-                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-                    elif is_name == 'Ross':
-                        is_nb1 = 59
-                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-                    elif is_name == 'Filchner':
-                        is_nb1 = 105
-                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
-                    elif is_name == 'Ronne':
-                        is_nb1 = 104
-                        ismask_info.append([is_nb1, is_name, is_region, is_melt_rate, is_melt_unc, is_area]) 
-                    #else:
-                    #    ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
-                else:
-                    ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+                ismask_info.append([is_nb0, is_name, is_region, is_melt_rate, is_melt_unc, is_area])
+
+        ismask_info.append([500, 'NotInRignot', ' ', np.nan, np.nan, np.nan])
 
         arr_ismask_info = np.array(ismask_info)
 
@@ -981,7 +906,7 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
         df['melt_uncertainty'] = df['melt_uncertainty'].astype(float)
         df['isf_area_rignot'] = df['isf_area_rignot'].astype(float)
 
-        if FRIS_one and not mouginot_basins:
+        if FRIS_one:
 
             df['isf_name'].loc[11] = 'Filchner-Ronne'
             df['isf_melt'].loc[11] = df['isf_melt'].loc[11] + df['isf_melt'].loc[21]
@@ -989,38 +914,22 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
             df['isf_area_rignot'].loc[11] = df['isf_area_rignot'].loc[11] + df['isf_area_rignot'].loc[21] 
             df = df.drop(21)
 
-        elif mouginot_basins:        
+        elif not FRIS_one and mouginot_basins:        
 
-            df['isf_name'].loc[104] = 'Filchner-Ronne'
-            df['isf_melt'].loc[104] = df['isf_melt'].loc[104] + df['isf_melt'].loc[105]
-            df['melt_uncertainty'].loc[104] = df['melt_uncertainty'].loc[104] + df['melt_uncertainty'].loc[105] # this might be a bit dodgy to add the uncertainties?
-            df['isf_area_rignot'].loc[104] = df['isf_area_rignot'].loc[104] + df['isf_area_rignot'].loc[105] 
-            df = df.drop(105)
-    ###########################################################
-    
-    ### Compute area from our data
-    #if mouginot_basins:
-    #    is_mask = new_mask['mask'].where(new_mask['mask']>1)
-    #else:
-    is_mask = new_mask.where(new_mask>1)
-    
-    if file_metadata[-3::] == 'txt':
+            print('you have chosen the option mouginot_basins so FRIS is merged in any case. Not what you wanted? Set the option to False and use the more manual limits. I have not worked on fixing this.')
+
+        ### Compute area from our data
+        is_mask = new_mask.where(new_mask>1)
+
         idx_da = xr.DataArray(data=df.index, dims=['Nisf']).chunk({'Nisf':1})
-    else:
-        group_key = is_mask.groupby(is_mask).groups
-        idx_da = xr.DataArray(data=np.array(list((group_key.keys()))).astype(int), dims=['Nisf']).chunk({'Nisf': 1})
-        idx_da = idx_da.where(idx_da > 1, drop=True)
-        
-        df = pd.DataFrame(index=idx_da.values)
-    
-    if 'time' not in file_conc.dims:    
-        df['isf_area_here'] = file_conc.chunk({'x':1000,'y':1000}).where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
-    
-    df1 = df.sort_index()
-    
-    ########################################################### IF WE HAVE THIS INFO
-    if file_metadata[-3::] == 'txt':
+
+
+        if 'time' not in file_conc.dims:
+            df['isf_area_here'] = file_conc.chunk({'x':1000,'y':1000}).where(is_mask == idx_da).sum(['x','y']) * abs(dx) * abs(dy) * 10 ** -6
+
         ### Correct melt numbers using our area
+        df1 = df.sort_index()
+            #print('here 1')
 
         if 'time' not in file_conc.dims: 
             df1['isf_melt'] = df1['isf_melt'] * df1['isf_area_here'] / df1['isf_area_rignot']
@@ -1033,12 +942,11 @@ def prepare_csv_metadata(file_metadata, file_metadata_GL_flux, file_conc, dx, dy
         # add grounding line flux as given by Rignot et al 2013
         GL_flux_pd = pd.read_csv(file_metadata_GL_flux, delimiter=';').dropna(how='all',axis=1).dropna(how='any',axis=0)
         df1['GL_flux'] = np.nan
-        if not mouginot_basins:
-            for idx_gl in GL_flux_pd.index:
-                for idx in df1.index:
-                    if df1['isf_name'].loc[idx] == GL_flux_pd['Ice Shelf Name'].loc[idx_gl]:
-                        df1['GL_flux'].loc[idx] = float(GL_flux_pd['Grounding line flux'].loc[idx_gl])
-    ###########################################################
+
+        for idx_gl in GL_flux_pd.index:
+            for idx in df1.index:
+                if df1['isf_name'].loc[idx] == GL_flux_pd['Ice Shelf Name'].loc[idx_gl]:
+                    df1['GL_flux'].loc[idx] = float(GL_flux_pd['Grounding line flux'].loc[idx_gl])
 
     return df1
 
@@ -1074,7 +982,7 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
     """ 
     
     file_draft = file_draft.where(file_draft<0,0)
-
+    
     idx_da = xr.DataArray(data=df1.index, dims=['Nisf']).chunk({'Nisf': 1})
 
     if 'time' in mask_front.dims:
@@ -1106,7 +1014,7 @@ def compute_dist_front_bot_ice(mask_gline, mask_front, file_draft, file_bed, df1
         return ds_clean
 
     else:
-        
+
         #print('here 7')
         df1['front_bot_depth_max'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).min(['x','y'])
         df1['front_bot_depth_avg'] = -1*file_bed.chunk({'x': 1000, 'y': 1000}).where(mask_front==idx_da).mean(['x','y'])
@@ -1207,7 +1115,7 @@ def prepare_metadata(file_metadata, file_metadata_GL_flux, dx, dy, new_mask, mas
             
     return df1, ds1
 
-def combine_mask_metadata(df1, outfile, ds_time=False):
+def combine_mask_metadata(df1, outfile, mouginot_basins, ds_time=False):
 
     """
     Combine the metadata and the mask info into one netcdf. 
@@ -1235,36 +1143,12 @@ def combine_mask_metadata(df1, outfile, ds_time=False):
     
     if 'time' in outfile.dims:
         whole_ds = whole_ds.merge(ds_time)
-
+        
     whole_ds['Nisf'].attrs['standard_name'] = 'ice shelf ID'
-    
-    if 'isf_name' in whole_ds.keys():
-        whole_ds['isf_name'].attrs['standard_name'] = 'ice shelf name'
-    if 'region' in whole_ds.keys():
-        whole_ds['region'].attrs['standard_name'] = 'region'
-        whole_ds['region'].attrs['long_name'] = 'Region name'
-    if 'isf_melt' in whole_ds.keys():
-        whole_ds['isf_melt'].attrs['standard_name'] = 'ice shelf melt'
-        whole_ds['isf_melt'].attrs['units'] = 'Gt/yr'
-    if 'melt_uncertainty' in whole_ds.keys():
-        whole_ds['melt_uncertainty'].attrs['standard_name'] = 'melt uncertainty'
-        whole_ds['melt_uncertainty'].attrs['units'] = 'Gt/yr'
-    if 'isf_area_rignot' in whole_ds.keys():
-        whole_ds['isf_area_rignot'].attrs['standard_name'] = 'ice shelf area Rignot'
-        whole_ds['isf_area_rignot'].attrs['units'] = 'km^2'
-        whole_ds['isf_area_rignot'].attrs['long_name'] = 'Ice shelf area in Rignot et al 2013'
+    whole_ds['isf_name'].attrs['standard_name'] = 'ice shelf name'    
     whole_ds['isf_area_here'].attrs['standard_name'] = 'our ice shelf area'
     whole_ds['isf_area_here'].attrs['units'] = 'km^2'
     whole_ds['isf_area_here'].attrs['long_name'] = 'Ice shelf area computed from our mask'
-    
-    #whole_ds['ratio_isf_areas'].attrs['standard_name'] = 'ratio isf area here/Rignot'
-    #whole_ds['ratio_isf_areas'].attrs['units'] = '-'
-    #whole_ds['ratio_isf_areas'].attrs['long_name'] = 'Ratio between ice shelf area computed from our mask and area from Rignot et al 2013'
-    
-    if 'GL_flux' in whole_ds.keys():
-        whole_ds['GL_flux'].attrs['standard_name'] = 'grounding_line_flux'
-        whole_ds['GL_flux'].attrs['units'] = 'Gt/yr'
-        whole_ds['GL_flux'].attrs['long_name'] = 'Flux across grounding line from Rignot et al 2013'
     whole_ds['front_bot_depth_max'].attrs['standard_name'] = 'max depth between isf front and ocean bottom'
     whole_ds['front_bot_depth_max'].attrs['units'] = 'm'
     whole_ds['front_bot_depth_max'].attrs['long_name'] = 'Maximum depth between the ice shelf front and ocean bottom'
@@ -1289,9 +1173,28 @@ def combine_mask_metadata(df1, outfile, ds_time=False):
     whole_ds['front_max_lon'].attrs['standard_name'] = 'Max longitude isf front'
     whole_ds['front_max_lon'].attrs['units'] = 'degrees_east'
     whole_ds['front_max_lon'].attrs['long_name'] = 'Maximum longitude of the ice shelf front'
+    
+    if not mouginot_basins:
+
+        whole_ds['region'].attrs['standard_name'] = 'region'
+        whole_ds['region'].attrs['long_name'] = 'Region name'
+        whole_ds['isf_melt'].attrs['standard_name'] = 'ice shelf melt'
+        whole_ds['isf_melt'].attrs['units'] = 'Gt/yr'
+        whole_ds['melt_uncertainty'].attrs['standard_name'] = 'melt uncertainty'
+        whole_ds['melt_uncertainty'].attrs['units'] = 'Gt/yr'
+        #whole_ds['isf_area_rignot'].attrs['standard_name'] = 'ice shelf area Rignot'
+        #whole_ds['isf_area_rignot'].attrs['units'] = 'km^2'
+        #whole_ds['isf_area_rignot'].attrs['long_name'] = 'Ice shelf area in Rignot et al 2013'
+        #whole_ds['ratio_isf_areas'].attrs['standard_name'] = 'ratio isf area here/Rignot'
+        #whole_ds['ratio_isf_areas'].attrs['units'] = '-'
+        #whole_ds['ratio_isf_areas'].attrs['long_name'] = 'Ratio between ice shelf area computed from our mask and area from Rignot et al 2013'
+        whole_ds['GL_flux'].attrs['standard_name'] = 'grounding_line_flux'
+        whole_ds['GL_flux'].attrs['units'] = 'Gt/yr'
+        whole_ds['GL_flux'].attrs['long_name'] = 'Flux across grounding line from Rignot et al 2013'
+
 
     # Global attributes
-    whole_ds.attrs['history'] = 'Created with combine_mask_metadata() by C. Burgard'
+    whole_ds.attrs['history'] = 'Created with multimelt.combine_mask_metadata() by C. Burgard'
     whole_ds.attrs['projection'] = 'Polar Stereographic South (71S,0E)'
     whole_ds.attrs['proj4'] = '+init=epsg:3031'
     return whole_ds
@@ -1492,13 +1395,21 @@ def create_mask_and_metadata_isf(file_map, file_bed, file_msk, file_draft, file_
 
     print('--------- COMBINE MASK AND METADATA --------------')
     if 'time' in outfile.dims:
-        whole_ds = combine_mask_metadata(df1, outfile, ds1)
+        whole_ds = combine_mask_metadata(df1, outfile, mouginot_basins, ds1)
     else:
-        whole_ds = combine_mask_metadata(df1, outfile)
+        whole_ds = combine_mask_metadata(df1, outfile, mouginot_basins)
     print('--------- COMPUTE DISTANCE TO GROUNDING LINE AND ICE FRONT --------------')
     whole_ds = compute_distance_GL_IF_ISF(whole_ds)
     
     return whole_ds
+
+
+
+
+
+
+
+
 
 
 
