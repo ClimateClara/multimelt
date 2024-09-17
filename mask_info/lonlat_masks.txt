@@ -214,8 +214,8 @@ if ( lon(ii) .ge.  161.0 .and. lon(ii) .lt.  164.1 .and. lat(jj) .ge.  -75.20 .a
 if ( lon(ii) .ge.  155.0 .and. lon(ii) .lt.  162.45.and. lat(jj) .ge.  -75.50 .and. lat(jj) .lt.  -75.20 )  isfmask(ii,jj) = 64 ! Drygalsky
 if ( lon(ii) .ge.  162.45.and. lon(ii) .lt.  166.5 .and. lat(jj) .ge.  -75.45 .and. lat(jj) .lt.  -75.20 )  isfmask(ii,jj) = 64 ! Drygalsky
 if ( lon(ii) .ge.  163.1 .and. lon(ii) .lt.  166.5 .and. lat(jj) .ge.  -75.70 .and. lat(jj) .lt.  -75.20 )  isfmask(ii,jj) = 64 ! Drygalsky
-if ( lon(ii) .ge.  150.0 .and. lon(ii) .le.  180.0 .and. lat(jj) .ge.  -86.00 .and. lat(jj) .lt.  -77.00 )  isfmask(ii,jj) = 10 ! Ross
-if ( lon(ii) .ge. -180.0 .and. lon(ii) .lt. -145.0 .and. lat(jj) .ge.  -86.00 .and. lat(jj) .lt.  -77.70 )  isfmask(ii,jj) = 10 ! Ross
+if ( lon(ii) .ge.  150.0 .and. lon(ii) .le.  180.5 .and. lat(jj) .ge.  -86.00 .and. lat(jj) .lt.  -77.00 )  isfmask(ii,jj) = 10 ! Ross ! modified 180.0 to 180.5 to avoid a hole around the limit
+if ( lon(ii) .ge. -180.5 .and. lon(ii) .lt. -145.0 .and. lat(jj) .ge.  -86.00 .and. lat(jj) .lt.  -77.70 )  isfmask(ii,jj) = 10 ! Ross ! modified -180.0 to -180.5 to avoid a hole around the limit
 if ( lon(ii) .ge. -158.0 .and. lon(ii) .lt. -156.0 .and. lat(jj) .ge.  -77.40 .and. lat(jj) .lt.  -76.70 )  isfmask(ii,jj) = 36 ! Withrow
 if ( lon(ii) .ge. -155.0 .and. lon(ii) .lt. -152.35.and. lat(jj) .ge.  -77.60 .and. lat(jj) .lt.  -76.40 )  isfmask(ii,jj) = 20
 if ( lon(ii) .ge. -152.35.and. lon(ii) .lt. -146.5 .and. lat(jj) .ge.  -77.80 .and. lat(jj) .lt.  -76.40 )  isfmask(ii,jj) = 65

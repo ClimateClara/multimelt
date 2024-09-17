@@ -9,7 +9,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 import gsw
 import itertools
-import basal_melt_param.useful_functions as uf
+import multimelt.useful_functions as uf
 
 def cut_out_contshelf_offshore(input_fld, mask_ocean, offshore, contshelf):
     

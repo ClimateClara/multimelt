@@ -26,7 +26,7 @@ name_isf( 29) = 'Vigrid             '; name_reg( 29) = 'Dronning Maud Land '; me
 name_isf( 13) = 'Nivl               '; name_reg( 13) = 'Dronning Maud Land '; melt_isf( 13) =   3.9  ; err_melt_isf( 13) =   2.0  ; area_isf( 13) =   7285.d0
 name_isf( 58) = 'Lazarev            '; name_reg( 58) = 'Dronning Maud Land '; melt_isf( 58) =   6.3  ; err_melt_isf( 58) =   2.0  ; area_isf( 58) =   8519.d0
 name_isf( 71) = 'Borchgrevink       '; name_reg( 71) = 'Dronning Maud Land '; melt_isf( 71) =   7.5  ; err_melt_isf( 71) =   6.0  ; area_isf( 71) =  21580.d0
-name_isf( 45) = 'Roi Baudouin        '; name_reg( 45) = 'Dronning Maud Land '; melt_isf( 45) =  14.1  ; err_melt_isf( 45) =  12.0  ; area_isf( 45) =  32952.d0
+name_isf( 45) = 'Roi Baudouin       '; name_reg( 45) = 'Dronning Maud Land '; melt_isf( 45) =  14.1  ; err_melt_isf( 45) =  12.0  ; area_isf( 45) =  32952.d0
 name_isf( 30) = 'Prince Harald      '; name_reg( 30) = 'Dronning Maud Land '; melt_isf( 30) =  -2.0  ; err_melt_isf( 30) =   3.0  ; area_isf( 30) =   5392.d0
 name_isf( 14) = 'Shirase            '; name_reg( 14) = 'Dronning Maud Land '; melt_isf( 14) =   5.7  ; err_melt_isf( 14) =   1.0  ; area_isf( 14) =    821.d0
 name_isf( 59) = 'Rayner/Thyer       '; name_reg( 59) = 'East 1             '; melt_isf( 59) =   6.7  ; err_melt_isf( 59) =   1.0  ; area_isf( 59) =    641.d0
