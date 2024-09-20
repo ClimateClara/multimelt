@@ -423,12 +423,17 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, Ale
         #################
         # fix the problems around Alexander Island (ice shelves with grounding line only on the island)
         mask_gline_orig = mask_gline.copy()
-                
+
         larger_region = new_mask.sel(x=slice(-2998000.,0.5),y=slice(0,2998000.))
+        if len(larger_region) == 0: # in case the y axis is reversed
+            larger_region = new_mask.sel(x=slice(-2998000.,0.5),y=slice(2998000.,0))
+
         mask_10_isl = larger_region.where(larger_region == 0, 5).where(larger_region != 0, 1)
         mask_isl = mask_10_isl.where(mask_10_isl == 1, 0) #set all ice shelves and open ocean to 0, set all grounded ice to 1
-        
+
         core = mask_isl.sel(x=slice(- 1938000.,- 1900000.),y=slice(680000.,718000.)).reindex_like(mask_isl)
+        if np.isnan(core.max()): # in case the y axis is reversed
+            core = mask_isl.sel(x=slice(- 1938000.,- 1900000.),y=slice(718000.,680000.)).reindex_like(mask_isl)
         mask_core = mask_isl.where(np.isnan(core),5)
 
         # filter that checks the point around
@@ -466,8 +471,8 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, Ale
                 iter_mask = iter_mask.where(~((corr >= 5) & (mask_core == 1)),5)
 
             mask_island = iter_mask.where(iter_mask !=5, 2)
-            
-        mask_island = mask_island.where(mask_island>0,0)
+
+            mask_island = mask_island.where(mask_island>0,0)
 
         ##########################################
 
@@ -495,10 +500,10 @@ def def_grounding_line(new_mask, mask_ground, ground_point, add_fac, dx, dy, Ale
             xr_corr_neighbors = mask_10_island.copy(data=pf.nd_corr(mask_10_island,xr_weights))
 
             cut_gline = xr_corr_neighbors.where((larger_region>1) & (xr_corr_neighbors>0))
-            
-    
+
+
         mask_gline_new = larger_region.where(cut_gline>0).reindex_like(mask_gline_orig)
-        
+
         mask_gline_final = mask_gline_orig.copy()
         for kisf in AlexIslandisf:
             mask_gline_final = mask_gline_final.where(mask_gline_new != kisf, mask_gline_new) # file_isf.Nisf.where(file_isf['isf_name'] == 'Bach', drop=True).values[0] (54)
