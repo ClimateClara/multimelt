@@ -113,9 +113,10 @@ def def_isf_mask(arr_def_ismask, file_msk, file_conc, lon, lat, FRIS_one=True,
         #new_mask = new_mask.where(np.isfinite(new_mask), 500)
         ####### ^ HOW I DID IT FOR SUMMER PAPER ####
         
-        # combine ERoss and WRoss, Filchner and Ronne
         new_mask_IMBIE_extrap = arr_def_ismask['Iceshelf_extrap'].where(arr_def_ismask['Iceshelf_extrap'] != 67, 66) # combine Ross
-        new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(new_mask_IMBIE_extrap != 125, 124) # combine FRIS
+        if FRIS_one:
+            # combine ERoss and WRoss, Filchner and Ronne
+            new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(new_mask_IMBIE_extrap != 125, 124) # combine FRIS
 
         # only ice shelves
         new_mask_IMBIE_extrap = new_mask_IMBIE_extrap.where(file_conc > 0) # only where there is ice shelf
