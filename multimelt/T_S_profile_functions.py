@@ -9,6 +9,7 @@ import xarray as xr
 from tqdm.notebook import tqdm
 import gsw
 import itertools
+from scipy.spatial import cKDTree
 import multimelt.useful_functions as uf
 
 def cut_out_contshelf_offshore(input_fld, mask_ocean, offshore, contshelf):
