@@ -26,7 +26,13 @@ Multimelt contains a large amount of existing basal melt parameterisations for A
 
 Also, multimelt contains functions to create masks of the Antarctic continent and the different ice shelves, and other geographical parameters on a circum-Antarctic scale, for input on a stereographic grid. 
 
-To use this package, clone the github repository locally and install it into you python/conda environment via 
+To use this package, you can now go through pypi
+
+.. code-block:: bash
+    
+    pip install multimelt
+
+or clone the repository and do 
 
 .. code-block:: bash
     
@@ -42,7 +48,7 @@ It contains four example python notebooks:
 
 The documentation can be found here: http://multimelt.readthedocs.io/
 
-Don't hesitate to contact me if any questions arise: clara.burgard@univ-grenoble-alpes.fr
+Don't hesitate to contact me if any questions arise: clara.burgard@locean.ipsl.fr
 
 How to cite multimelt
 ---------------------
