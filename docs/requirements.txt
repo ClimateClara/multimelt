@@ -1,1 +1,5 @@
 sphinxcontrib-bibtex
+
+pybtex
+pybtex-docutils
+pybtex-style
