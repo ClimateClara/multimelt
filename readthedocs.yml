@@ -42,6 +42,12 @@ sphinx:
 
   # fail_on_warning: true
 
+python:
+  install:
+    - requirements: requirements.txt
+    - pip:
+        - sphinxcontrib-bibtex
+
 
   #conda:
   #  file: docs/environment.yml
