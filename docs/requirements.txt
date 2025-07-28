@@ -3,3 +3,4 @@ sphinxcontrib-bibtex
 
 pybtex
 pybtex-docutils
+pybtex-apa7-style
