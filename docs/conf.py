@@ -41,7 +41,7 @@ extensions = [
 
 bibtex_bibfiles = ['./literature/references.bib']
 bibtex_encoding = 'latin'
-bibtex_default_style = 'unsrt'
+bibtex_default_style = 'apa7'#'unsrt'
 
 from pybtex.plugin import find_plugin
 from pybtex.database import parse_file
