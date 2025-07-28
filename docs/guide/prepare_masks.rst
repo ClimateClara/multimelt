@@ -181,7 +181,7 @@ The resulting netcdf file ``boxes_1D.nc`` contains the following variables:
 .. _prep_plume_charac:
 
 Preparing the plume characteristics
-----------------------------------
+-----------------------------------
 
 Input data
 ^^^^^^^^^^

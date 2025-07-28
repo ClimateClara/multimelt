@@ -25,7 +25,7 @@ Authors
 | An existing Fortran code by N. Jourdain has been translated and adapted to Python and further multimelt code has been developed by Clara Burgard - `ClimateClara <http://www.github.com/ClimateClara>`_.
 
 How to cite
--------
+-----------
 The detailed description of the application of the functions in multimelt is found in :cite:`burgard22` and should therefore, when used, be cited as follows:
 
 Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P. (2022): An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere, https://doi.org/10.5194/tc-16-4931-2022.
