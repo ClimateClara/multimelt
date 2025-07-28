@@ -43,6 +43,16 @@ bibtex_bibfiles = ['./literature/references.bib']
 bibtex_encoding = 'latin'
 bibtex_default_style = 'unsrt'
 
+from pybtex.plugin import find_plugin
+from pybtex.database import parse_file
+APA = find_plugin('pybtex.style.formatting', 'apa7')()
+HTML = find_plugin('pybtex.backends', 'html')()
+
+def bib_to_apa7_html(bibfile):
+    bibliography = parse_file(bibfile, 'bibtex')
+    formatted_bib = APA.format_bibliography(bibliography)
+    return "<br>".join(entry.text.render(HTML) for entry in formatted_bib)
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
