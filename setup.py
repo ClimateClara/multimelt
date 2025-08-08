@@ -31,11 +31,11 @@ setuptools.setup(
     name='multimelt',
     
     #The project's version 
-    version='0.4',
+    version='0.5',
     
     #The project's metadata
     author='Clara Burgard',
-    author_email='clara.burgard@univ-grenoble-alpes.fr',
+    author_email='clara.burgard@locean.ipsl.fr',
     description='Regroupment of the main existing ice shelf basal melt parameterisations',
     long_description=long_description,
     
