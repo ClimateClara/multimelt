@@ -39,9 +39,9 @@ extensions = [
 	'sphinxcontrib.bibtex'
 ]
 
-bibtex_bibfiles = ['./literature/references.bib']
-bibtex_encoding = 'latin'
-bibtex_default_style = 'unsrt'
+#bibtex_bibfiles = ['./literature/references.bib']
+#bibtex_encoding = 'latin'
+#bibtex_default_style = 'unsrt'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -60,11 +60,6 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # html_theme = 'alabaster'
-
-# added by Clara
-import sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme

@@ -42,6 +42,10 @@ sphinx:
 
   # fail_on_warning: true
 
+
+conda:
+    file: docs/environment.yml
+    
 python:
     install:
       - method: pip
