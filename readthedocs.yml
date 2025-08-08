@@ -45,7 +45,7 @@ sphinx:
 
 python:
     install:
-      - method: conda
+      - method: python
         path: .
         extra_requirements:
          - docs
