@@ -6,3 +6,4 @@ pybtex-docutils
 
 sphinx
 sphinx-rtd-theme
+sphinxcontrib-bibtex
