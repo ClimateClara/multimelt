@@ -41,8 +41,8 @@ extensions = [
     'sphinx.ext.viewcode',
 ]
 
-bibtex_bibfiles = ['./literature/references.bib']
-bibtex_encoding = 'latin'
+bibtex_bibfiles = ['literature/references.bib']
+bibtex_encoding = 'utf-8'
 bibtex_default_style = 'plain'
 
 # Add any paths that contain templates here, relative to this directory.
