@@ -21,6 +21,7 @@ Authors
 * the plume parameterisation as described by :cite:`lazeroms18` and :cite:`lazeroms19`
 * the box parameterisation (or PICO) as described by :cite:`reese18`
 * the PICOP parameterisation as described py :cite:`pelle19`
+* the DeepMelt model (neural network) as described by :cite:`burgard23`
     
 | An existing Fortran code by N. Jourdain has been translated and adapted to Python and further multimelt code has been developed by Clara Burgard - `ClimateClara <http://www.github.com/ClimateClara>`_.
 
@@ -29,6 +30,10 @@ How to cite
 The detailed description of the application of the functions in multimelt is found in :cite:`burgard22` and should therefore, when used, be cited as follows:
 
 Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P. (2022): An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere, https://doi.org/10.5194/tc-16-4931-2022.
+
+For DeepMelt, we point to:
+
+Burgard, C., Jourdain, N. C., Mathiot, P., Smith, R. S., Schäfer, R., Caillet, J., et al. (2023): Emulating present and future simulations of melt rates at the base of Antarctic ice shelves with neural networks. Journal of Advances in Modeling Earth Systems, 15, e2023MS003829. https://doi.org/10.1029/2023MS003829
 
 License
 -------

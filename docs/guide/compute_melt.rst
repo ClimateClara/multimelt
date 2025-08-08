@@ -174,6 +174,36 @@ To run the PICOP parameterisations, use the following command
     ds_2D.to_netcdf(outputpath_melt+'melt_rates_2D_'+mparam+'.nc')
     ds_1D.to_netcdf(outputpath_melt+'melt_rates_1D_'+mparam+'.nc')
 
+To run DeepMelt, use the following command
+
+.. code-block:: python
+
+    nisf_list = geometry_info_1D.Nisf
+    T_S_profile = file_TS.ffill(dim='depth') 
+    
+    mparam = 'DeepMelt'
+    
+    path_model = './multimelt/deepmelt_extras/' # correct the path if it does not work
+    
+    geometry_info_2D_extended = geometry_info_2D.merge(file_isf[['dGL','dIF']]).merge(deepmelt_charac)
+    
+    deepmelt_norm_file = xr.open_dataset(path_model+'DeepMelt_norm_metrics.nc')
+    deepmelt_norm = deepmelt_norm_file.to_dataframe()
+    
+    ds_2D, ds_1D = meltf.calculate_melt_rate_1D_and_2D_all_isf(nisf_list, 
+                                                               T_S_profile, 
+                                                               geometry_info_2D, 
+                                                               geometry_info_1D, 
+                                                               isf_stack_mask, 
+                                                               mparam, 
+                                                               None,
+                                                               deepmelt_model=path_model+'DeepMelt_',
+                                                               deepmelt_norm=deepmelt_norm)
+    
+    ds_2D.to_netcdf(outputpath_melt+'melt_rates_2D_'+mparam+'.nc')
+    ds_1D.to_netcdf(outputpath_melt+'melt_rates_1D_'+mparam+'.nc')
+
+
 Output
 ^^^^^^
 

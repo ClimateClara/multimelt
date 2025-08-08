@@ -239,6 +239,13 @@ The resulting netcdf file ``plume_characteristics.nc`` contains the following va
 * ``zGL``: map (on x and y) of grounding line depth (negative downwards) associated to each ice shelf point [m]
 * ``alpha``: map (on x and y) of slope associated to each ice shelf point
     
+.. _prep_deepmelt_charac:
+
+Preparing the DeepMelt characteristics
+--------------------------------------
+
+TO BE COMPLETED => check the example file!
+    
 
 
 
