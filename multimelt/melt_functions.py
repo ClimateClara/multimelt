@@ -1663,10 +1663,118 @@ def calculate_melt_rate_2D_picop_1isf(kisf, T_S_profile, geometry_info_2D, geome
 
     return m_out
 
+def apply_NN_results_2D(norm_metrics, all_info_all, model):
+    
+    all_info_df = all_info_all.to_dataframe()
+
+    input_vars = ['dGL','dIF','ice_draft_pos','bathymetry','slope_bed_lon','slope_bed_lat','slope_ice_lon','slope_ice_lat',
+                'theta_ocean','salinity_ocean','T_mean', 'S_mean', 'T_std', 'S_std']
+    
+    val_norm = pp.normalise_vars(all_info_df[input_vars],
+                                norm_metrics[input_vars].loc['mean_vars'],
+                                norm_metrics[input_vars].loc['range_vars'])
+
+    x_val_norm = val_norm
+    
+    batch_size=4096
+    y_out_norm = model.predict(x_val_norm.values.astype('float64'),batch_size=batch_size,verbose = 1)
+
+    y_out_norm_xr = xr.DataArray(data=y_out_norm.squeeze()).rename({'dim_0': 'index'})
+    y_out_norm_xr = y_out_norm_xr.assign_coords({'index': x_val_norm.index})
+
+    y_out_norm_xr_2D = uf.bring_back_to_2D(y_out_norm_xr)
+
+    # denormalise the output
+    y_out_xr = pp.denormalise_vars(y_out_norm_xr_2D, 
+                             norm_metrics['melt_m_ice_per_y'].loc['mean_vars'],
+                             norm_metrics['melt_m_ice_per_y'].loc['range_vars'])
+
+    return y_out_xr
+
+def calculate_melt_rate_2D_deepmelt_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, deepmelt_model, deepmelt_norm):
+    
+    """
+    Function to compute melt from DeepMelt for one ice shelf (neural network from Burgard et al. 2023).
+        
+    Parameters
+    ----------
+    kisf : int
+        Ice shelf ID for the ice shelf of interest. 
+    T_S_profile : xarray.Dataset
+        Dataset containing temperature (in degrees C) and salinity (in psu) input profiles.
+    geometry_info_2D : xarray.Dataset
+        Dataset containing relevant 2D geometrical information.
+    geometry_info_1D : xarray.Dataset
+        Dataset containing relevant 1D geometrical information.
+    isf_stack_mask : xarray.DataArray
+        DataArray containing the stacked coordinates of the ice shelves (to make computing faster).
+    mparam : str
+        Parameterisation to be applied.
+    deepmelt_model : str
+        Path to the .h5 containing the model.
+    deepmelt_norm : str
+        Path to the .nc containing the metrics to norm the input and output.
+
+    Returns
+    -------
+    m_out : xr.DataArray
+        Horizontal distribution of the melt rate in m ice/s for the ice shelf of interest.
+    """  
+    
+    # select indices corresponding to the ice shelf points
+    #print(angle_option)
+    geometry_isf_2D = uf.choose_isf(geometry_info_2D,isf_stack_mask, kisf)
+    isf_conc_kisf = geometry_isf_2D['isfdraft_conc']
+    cell_area_kisf = geometry_isf_2D['grid_cell_area_weighted']
+    ice_draft_pos_isf = geometry_isf_2D['ice_draft_pos']
+
+    geometry_kisf = geometry_isf_2D[['dGL', 'dIF','ice_draft_pos','bathymetry','slope_bed_lon','slope_bed_lat','slope_ice_lon','slope_ice_lat']]
+
+    # Entering temperature and salinity profiles
+    depth_of_int0 = ice_draft_pos_isf.where(ice_draft_pos_isf < file_isf['front_bot_depth_max'].sel(Nisf=kisf), 
+                                   file_isf['front_bot_depth_max'].sel(Nisf=kisf))
+    depth_of_int = depth_of_int0.where(ice_draft_pos_isf > file_isf['front_ice_depth_min'].sel(Nisf=kisf), 
+                                   file_isf['front_ice_depth_min'].sel(Nisf=kisf))
+    T_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars('depth')
+    S_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars('depth')
+
+    # Prepare T and S mean and std over the cavity
+    T_mean_cav = uf.weighted_mean(T_isf, 'mask_coord', cell_area_kisf).to_dataset(name='T_mean')
+    S_mean_cav = uf.weighted_mean(S_isf, 'mask_coord', cell_area_kisf).to_dataset(name='S_mean')
+    T_std_cav = uf.weighted_std(T_isf, 'mask_coord', cell_area_kisf).to_dataset(name='T_std')
+    S_std_cav = uf.weighted_std(S_isf, 'mask_coord', cell_area_kisf).to_dataset(name='S_std')
+    T_S_2D_meanstd_kisf = xr.merge([T_mean_cav,S_mean_cav,T_std_cav,S_std_cav])
+
+    # put everything on the whole ice shelf
+    T_S_info_br, TSmean_br = xr.broadcast(xr.merge([T_isf,S_isf]),T_S_2D_meanstd_kisf)
+    TS_info_all = xr.merge([T_S_info_br, TSmean_br])
+    geometry_2D_br, time_dpdt_in_br = xr.broadcast(geometry_kisf,TS_info_all)
+    all_info = xr.merge([geometry_2D_br, time_dpdt_in_br])
+
+    res_2D_list = []
+    res2D_sum = 0
+    for seed_nb in range(1,11):
+        #print('seed_nb',seed_nb)
+    
+        model = keras.models.load_model(deepmelt_model+'_'+str(seed_nb).zfill(2)+'.h5', 
+                                        compile=False)
+        model.compile(optimizer="adam",
+                      loss=tf.keras.losses.MeanSquaredError(),
+                      metrics=[tf.keras.metrics.MeanSquaredError()])
+
+        #print('Computing 2D patterns')
+        res2D = apply_NN_results_2D(deepmelt_norm, all_info, model)
+        res2D_sum = res2D_sum + res2D
+    m_out = res2D_sum / 10
+    
+    return m_out
+
 
 def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                 U_param=True, C=None, E0=None, angle_option='lazero',
-                                box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no', gamma_plume=None, 
+                                box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot',
+                                pism_version='no', picop_opt='no', gamma_plume=None, 
+                                deepmelt_model=None, deepmelt_norm=None,
                                 T_corrections=False, HUB=False):
 
         """
@@ -1734,6 +1842,15 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
                 print('Careful! I did not receive a E0, I am using the default value!')
                 E0 = E0_lazero
             melt_rate_2D_isf = calculate_melt_rate_2D_plumes_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, E0)
+
+        elif mparam == 'DeepMelt':
+            if deepmelt_model is None:
+                print('You need to give me the path to DeepMelt_weights.h5! I cannot work this way!')
+            if deepmelt_norm is None:
+                print('You need to give me the path to DeepMelt_normmetrics.nc! I cannot work this way!')
+            else:
+                melt_rate_2D_isf = calculate_melt_rate_2D_deepmelt_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, deepmelt_model, deepmelt_norm)
+            
         elif picop_opt in ['2018','2019']:
             if C is None:
                 print('Careful! I did not receive a C, I am using the default value!')
@@ -1774,7 +1891,8 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
 def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                    U_param=True, C=None, E0=None, angle_option='lazero',
                                    box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
-                                   gamma_plume=None, T_corrections=False,
+                                   gamma_plume=None, deepmelt_model=None, deepmelt_norm=None, 
+                                   T_corrections=False,
                                    options_2D=['melt_m_ice_per_y','melt_m_we_per_y'],
                                    HUB=False,
                                    verbose=True):
@@ -1838,6 +1956,10 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
     if verbose:
         print('LET US START WITH THE 2D VALUES')
 
+    if mparam == 'DeepMelt':
+        import tensorflow as tf
+        from tensorflow import keras
+
     n = 0
     
     if verbose:
@@ -1850,7 +1972,10 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
         
         melt_rate_2D_isf = calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                                        U_param, C, E0, angle_option, 
-                                                       box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, gamma_plume, T_corrections, HUB)
+                                                       box_charac_2D, box_charac_1D, box_tot, box_tot_option,
+                                                       pism_version, picop_opt, gamma_plume, 
+                                                       deepmelt_model, deepmelt_norm,
+                                                       T_corrections, HUB)
         
         if n == 0:
             ds_melt_rate_2D_all = melt_rate_2D_isf.squeeze().drop('Nisf')
@@ -1945,7 +2070,8 @@ def calculate_melt_rate_1D_all_isf(nisf_list, ds_melt_rate_2D_all, geometry_info
 def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                           U_param=True, C=None, E0=None, angle_option='lazero',
                                           box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
-                                          gamma_plume=None, T_corrections=False,
+                                          gamma_plume=None, deepmelt_model=None, deepmelt_norm=None,
+                                          T_corrections=False,
                                           options_2D=['melt_m_ice_per_y','melt_m_we_per_y'],
                                           options_1D=['melt_m_ice_per_y_avg', 'melt_m_ice_per_y_min', 'melt_m_ice_per_y_max', 'melt_we_per_y_tot',
                                                      'melt_we_per_y_avg','melt_Gt_per_y_tot'],
@@ -2015,7 +2141,7 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
         print('WELCOME! AS YOU WISH, I WILL COMPUTE MELT RATES FOR THE PARAMETERISATION "'+mparam+'" FOR '+str(len(nisf_list))+' ICE SHELVES')
     
     ds_2D = calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, U_param, C, E0, angle_option,
-                                           box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, gamma_plume, T_corrections,
+                                           box_charac_2D, box_charac_1D, box_tot, box_tot_option, pism_version, picop_opt, gamma_plume, deepmelt_model, deepmelt_norm, T_corrections,
                                            options_2D, HUB, verbose)
     
     ds_1D = calculate_melt_rate_1D_all_isf(nisf_list, ds_2D, geometry_info_2D, isf_stack_mask, options_1D, verbose)
@@ -2030,7 +2156,8 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
 def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, gamma, 
                                           U_param=True, C=None, E0=None, angle_option='lazero',
                                           box_charac_2D=None, box_charac_1D=None, box_tot=None, box_tot_option='box_nb_tot', pism_version='no', picop_opt='no',
-                                          gamma_plume=None, T_corrections=False,
+                                          gamma_plume=None, deepmelt_model=None, deepmelt_norm=None,
+                                          T_corrections=False,
                                           tuning_mode=False, 
                                           HUB=False,
                                           verbose=True):
@@ -2120,7 +2247,9 @@ def calculate_melt_rate_Gt_and_box1_all_isf(nisf_list, T_S_profile, geometry_inf
                                                        gamma, 
                                                        U_param, C, E0, angle_option, 
                                                        box_charac_2D, box_charac_1D, box_tot, box_tot_option, 
-                                                       pism_version, picop_opt, gamma_plume, T_corrections, HUB)
+                                                       pism_version, picop_opt, gamma_plume, 
+                                                       deepmelt_model, deepmelt_norm,
+                                                       T_corrections, HUB)
 
         melt_rate_2D_isf_m_per_y = melt_rate_2D_isf * yearinsec
         melt_rate_1D_isf_Gt_per_y = (melt_rate_2D_isf_m_per_y * geometry_isf_2D['grid_cell_area_weighted']).sum(dim=['mask_coord']) * rho_i / 10**12
