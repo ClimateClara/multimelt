@@ -1,7 +1,6 @@
 References
 ==========
 
-.. bibliography:: references.bib
+.. bibliography:: 
     :all:
-    :style: apa7
-    :keyprefix:
+    :style: plain

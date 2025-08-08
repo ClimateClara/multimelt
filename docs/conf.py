@@ -14,6 +14,7 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../multimelt'))
+import sphinx_rtd_theme
 
 
 # -- Project information -----------------------------------------------------
@@ -32,26 +33,17 @@ release = '0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinxcontrib.bibtex',
 	'sphinx.ext.autodoc',
 	'sphinx.ext.intersphinx',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.napoleon',
-	'sphinxcontrib.bibtex'
+    'sphinx.ext.viewcode',
 ]
 
 bibtex_bibfiles = ['./literature/references.bib']
-bibtex_encoding = 'latin'
-bibtex_default_style = 'apa7'#'unsrt'
-
-from pybtex.plugin import find_plugin
-from pybtex.database import parse_file
-APA = find_plugin('pybtex.style.formatting', 'apa7')()
-HTML = find_plugin('pybtex.backends', 'html')()
-
-def bib_to_apa7_html(bibfile):
-    bibliography = parse_file(bibfile, 'bibtex')
-    formatted_bib = APA.format_bibliography(bibliography)
-    return "<br>".join(entry.text.render(HTML) for entry in formatted_bib)
+bibtex_encoding = 'utf-8'
+bibtex_default_style = 'plain'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -61,7 +53,6 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # From read the docs page.
@@ -69,8 +60,8 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 # html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme

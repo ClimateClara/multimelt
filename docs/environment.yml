@@ -26,6 +26,5 @@ dependencies:
     - pybtex-docutils
     - pyyaml
     - sphinxcontrib-bibtex
-    - pybtex-apa7-style
   - gsw
   - dask
