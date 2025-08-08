@@ -1854,9 +1854,9 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
 
         elif mparam == 'DeepMelt':
             if deepmelt_model is None:
-                print('You need to give me the path to DeepMelt_weights.h5! I cannot work this way!')
+                print('Oups! You need to give me the path to DeepMelt_weights.h5! I cannot work this way!')
             if deepmelt_norm is None:
-                print('You need to give me the path to DeepMelt_normmetrics.nc! I cannot work this way!')
+                print('Oups! You need to give me a dataframe from DeepMelt_normmetrics.nc! I cannot work this way!')
             else:
                 melt_rate_2D_isf = calculate_melt_rate_2D_deepmelt_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, deepmelt_model, deepmelt_norm).assign_coords({'Nisf': kisf})
             
