@@ -5,6 +5,11 @@ import xarray as xr
 import time
 from tqdm.notebook import trange, tqdm
 from numpy.polynomial import Polynomial
+import tensorflow as tf
+from tensorflow import keras
+import multimelt.deepmelt_functions as dmf
+
+
 
 def freezing_temperature(salinity,depth):
     
@@ -1667,25 +1672,25 @@ def apply_NN_results_2D(norm_metrics, all_info_all, model):
     
     all_info_df = all_info_all.to_dataframe()
 
-    input_vars = ['dGL','dIF','ice_draft_pos','bathymetry','slope_bed_lon','slope_bed_lat','slope_ice_lon','slope_ice_lat',
-                'theta_ocean','salinity_ocean','T_mean', 'S_mean', 'T_std', 'S_std']
-    
-    val_norm = pp.normalise_vars(all_info_df[input_vars],
+    input_vars = ['dGL','dIF','ice_draft_pos','bathymetry','slope_bed_lon','slope_bed_lat','slope_ice_lon','slope_ice_lat','theta_ocean','salinity_ocean','T_mean', 'S_mean', 'T_std', 'S_std']
+
+    val_norm = dmf.normalise_vars(all_info_df[input_vars],
                                 norm_metrics[input_vars].loc['mean_vars'],
                                 norm_metrics[input_vars].loc['range_vars'])
 
     x_val_norm = val_norm
     
     batch_size=4096
-    y_out_norm = model.predict(x_val_norm.values.astype('float64'),batch_size=batch_size,verbose = 1)
+    y_out_norm = model.predict(x_val_norm.values.astype('float64'),batch_size=batch_size,verbose = 0)
 
-    y_out_norm_xr = xr.DataArray(data=y_out_norm.squeeze()).rename({'dim_0': 'index'})
-    y_out_norm_xr = y_out_norm_xr.assign_coords({'index': x_val_norm.index})
+    mindex_coords = xr.Coordinates.from_pandas_multiindex(x_val_norm.index, 'myindex')
+    y_out_norm_xr = xr.DataArray(data=y_out_norm.squeeze()).rename({'dim_0': 'myindex'})
+    y_out_norm_xr = y_out_norm_xr.assign_coords(mindex_coords)
 
     y_out_norm_xr_2D = uf.bring_back_to_2D(y_out_norm_xr)
 
     # denormalise the output
-    y_out_xr = pp.denormalise_vars(y_out_norm_xr_2D, 
+    y_out_xr = dmf.denormalise_vars(y_out_norm_xr_2D, 
                              norm_metrics['melt_m_ice_per_y'].loc['mean_vars'],
                              norm_metrics['melt_m_ice_per_y'].loc['range_vars'])
 
@@ -1711,9 +1716,9 @@ def calculate_melt_rate_2D_deepmelt_1isf(kisf, T_S_profile, geometry_info_2D, ge
     mparam : str
         Parameterisation to be applied.
     deepmelt_model : str
-        Path to the .h5 containing the model.
-    deepmelt_norm : str
-        Path to the .nc containing the metrics to norm the input and output.
+        Path to the .h5 containing the model: str up to the seed_nb.
+    deepmelt_norm : pd.DataFrame
+        Pandas DataFrame containing the metrics to norm the input and output.
 
     Returns
     -------
@@ -1731,12 +1736,12 @@ def calculate_melt_rate_2D_deepmelt_1isf(kisf, T_S_profile, geometry_info_2D, ge
     geometry_kisf = geometry_isf_2D[['dGL', 'dIF','ice_draft_pos','bathymetry','slope_bed_lon','slope_bed_lat','slope_ice_lon','slope_ice_lat']]
 
     # Entering temperature and salinity profiles
-    depth_of_int0 = ice_draft_pos_isf.where(ice_draft_pos_isf < file_isf['front_bot_depth_max'].sel(Nisf=kisf), 
-                                   file_isf['front_bot_depth_max'].sel(Nisf=kisf))
-    depth_of_int = depth_of_int0.where(ice_draft_pos_isf > file_isf['front_ice_depth_min'].sel(Nisf=kisf), 
-                                   file_isf['front_ice_depth_min'].sel(Nisf=kisf))
-    T_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars('depth')
-    S_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars('depth')
+    depth_of_int0 = ice_draft_pos_isf.where(ice_draft_pos_isf < geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf), 
+                                   geometry_info_1D['front_bot_depth_max'].sel(Nisf=kisf))
+    depth_of_int = depth_of_int0.where(ice_draft_pos_isf > geometry_info_1D['front_ice_depth_min'].sel(Nisf=kisf), 
+                                   geometry_info_1D['front_ice_depth_min'].sel(Nisf=kisf))
+    T_isf = T_S_profile['theta_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars(['depth','Nisf'])
+    S_isf = T_S_profile['salinity_ocean'].sel(Nisf=kisf).interp({'depth': depth_of_int}).drop_vars(['depth','Nisf'])
 
     # Prepare T and S mean and std over the cavity
     T_mean_cav = uf.weighted_mean(T_isf, 'mask_coord', cell_area_kisf).to_dataset(name='T_mean')
@@ -1756,7 +1761,7 @@ def calculate_melt_rate_2D_deepmelt_1isf(kisf, T_S_profile, geometry_info_2D, ge
     for seed_nb in range(1,11):
         #print('seed_nb',seed_nb)
     
-        model = keras.models.load_model(deepmelt_model+'_'+str(seed_nb).zfill(2)+'.h5', 
+        model = keras.models.load_model(deepmelt_model+str(seed_nb).zfill(2)+'.h5', 
                                         compile=False)
         model.compile(optimizer="adam",
                       loss=tf.keras.losses.MeanSquaredError(),
@@ -1818,6 +1823,10 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
             Can be ``2019``, ``2018`` or ``no``, depending on if you want to use PICOP with analytical plume param, with empirical plume param or the original PICO without plume. 
         gamma_plume : float
             Gamma to be used in the plume part of PICOP.
+        deepmelt_model : str
+            Path to the .h5 containing the model: str up to the seed_nb.
+        deepmelt_norm : pd.DataFrame
+            Pandas DataFrame containing the metrics to norm the input and output.
         T_corrections : Boolean
             If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
 
@@ -1849,7 +1858,7 @@ def calculate_melt_rate_2D_1isf(kisf, T_S_profile, geometry_info_2D, geometry_in
             if deepmelt_norm is None:
                 print('You need to give me the path to DeepMelt_normmetrics.nc! I cannot work this way!')
             else:
-                melt_rate_2D_isf = calculate_melt_rate_2D_deepmelt_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, deepmelt_model, deepmelt_norm)
+                melt_rate_2D_isf = calculate_melt_rate_2D_deepmelt_1isf(kisf, filled_TS, geometry_info_2D, geometry_info_1D, isf_stack_mask, mparam, deepmelt_model, deepmelt_norm).assign_coords({'Nisf': kisf})
             
         elif picop_opt in ['2018','2019']:
             if C is None:
@@ -1939,6 +1948,10 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
         Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
     gamma_plume : float
         Gamma to be used in the plume part of PICOP.
+    deepmelt_model : str
+        Path to the .h5 containing the model: str up to the seed_nb.
+    deepmelt_norm : pd.DataFrame
+        Pandas DataFrame containing the metrics to norm the input and output.
     T_corrections : Boolean
         If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
     options_2D : list of str
@@ -1955,10 +1968,6 @@ def calculate_melt_rate_2D_all_isf(nisf_list, T_S_profile, geometry_info_2D, geo
     
     if verbose:
         print('LET US START WITH THE 2D VALUES')
-
-    if mparam == 'DeepMelt':
-        import tensorflow as tf
-        from tensorflow import keras
 
     n = 0
     
@@ -2119,6 +2128,10 @@ def calculate_melt_rate_1D_and_2D_all_isf(nisf_list, T_S_profile, geometry_info_
         Can be ``yes`` or ``no``, depending on if you want to use PICOP or the original PICO. 
     gamma_plume : float
         Gamma to be used in the plume part of PICOP.
+    deepmelt_model : str
+        Path to the .h5 containing the model: str up to the seed_nb.
+    deepmelt_norm : pd.DataFrame
+        Pandas DataFrame containing the metrics to norm the input and output.
     T_corrections : Boolean
         If ``True``, use regional corrections (preferentially only when using "new" Reese parameters).
     options_2D : list of str

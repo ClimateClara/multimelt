@@ -1,6 +1,7 @@
 from pyproj import Transformer
 from tqdm.notebook import trange, tqdm
 import xarray as xr
+import numpy as np
 
 # check if x and y are in range
 def in_range(in_xy,txy):

@@ -1110,7 +1110,7 @@ def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx
 def compute_alpha_local(kisf, plume_var_of_int, ice_draft_neg, dx, dy):   
 
     """
-    Compute alphas like in Appendix B of Favier et al., 2019 TCDiscussions.
+    Compute local alphas like in Appendix B of Favier et al., 2019 TCDiscussions.
     
     Parameters
     ----------
@@ -1205,7 +1205,7 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
         print('----------- PREPARATION OF ZGL AND ALPHA WITH MODIFIED LAZEROMS 2018 -----------')
     
     elif opt == 'local':     
-        print('----------- PREPARATION OF ZGL AND ALPHA WITH APPENDIX B FAVIER-----------')
+        print('----------- PREPARATION OF ZGL AND ALPHA WITH LOCAL APPROACH-----------')
     
     
     weights4 = create_4_dir_weights()

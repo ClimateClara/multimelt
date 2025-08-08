@@ -75,6 +75,7 @@ setuptools.setup(
           'gsw',
           'pyproj',
           'dask',
+          'tensorflow'
       ],
 
     extras_require={
