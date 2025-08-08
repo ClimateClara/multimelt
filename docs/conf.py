@@ -14,6 +14,7 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../multimelt'))
+import sphinx_rtd_theme
 
 
 # -- Project information -----------------------------------------------------
@@ -51,7 +52,6 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # From read the docs page.
@@ -60,6 +60,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # html_theme = 'alabaster'
+html_theme = "sphinx_rtd_theme"
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
