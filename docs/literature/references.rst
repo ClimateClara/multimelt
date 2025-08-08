@@ -3,5 +3,5 @@ References
 
 .. bibliography:: references.bib
     :all:
-    :style: apa7
+    :style: unsrt
     :keyprefix:
