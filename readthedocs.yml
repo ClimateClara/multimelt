@@ -44,11 +44,8 @@ sphinx:
 
 
 python:
-    install:
-      - method: python
-        path: .
-        extra_requirements:
-         - docs
+  install:
+    - requirements: docs/requirements.txt
 
 
   #conda:
@@ -56,4 +53,3 @@ python:
   #python:
   # version: 3
   # setup_py_install: true
-   
