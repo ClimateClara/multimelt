@@ -1045,6 +1045,14 @@ def compute_zGL_alpha_lazero_newmethod(kisf, plume_var_of_int, ice_draft_neg, dx
         Grid spacing in the x-direction
     dy : float
         Grid spacing in the y-direction
+    grad_corr: int
+        If we want to add some uncertainty in the slopes (adds grad_corr to the gradient) => makes it easier to have positive slopes when the differences are tiny.
+    extra_shift: int
+        Should be 2 if you do the smooth version, otherwise 1.
+    dist_incl : int
+        How many rows of points to take at the grounding line.
+    dist_incl : int
+        Distance, in grid cells, to count within the grounding line
         
     Returns
     -------
@@ -1159,6 +1167,14 @@ def compute_zGL_alpha_all(plume_var_of_int, opt, ice_draft_neg, grad_corr=0, dir
             local: local slope
     ice_draft_neg : xr.DataArray
         Ice draft depth in m. Negative downwards.
+    grad_corr: int
+        If we want to add some uncertainty in the slopes (adds grad_corr to the gradient) => makes it easier to have positive slopes when the differences are tiny.
+    extra_shift: int
+        Should be 2 if you do the smooth version, otherwise 1.
+    dist_incl : int
+        How many rows of points to take at the grounding line.
+    dist_incl : int
+        Distance, in grid cells, to count within the grounding line
         
     Returns
     -------
@@ -1233,6 +1249,16 @@ def prepare_plume_charac(plume_param_options, ice_draft_pos, plume_var_of_int, g
         Ice draft depth in m. Positive downwards.
     plume_var_of_int : xr.Dataset
         Dataset containing 'ISF_mask', 'GL_mask', 'IF_mask', 'dIF', 'dGL_dIF', 'latitude', 'longitude', 'front_ice_depth_avg'
+    dir_nb: int
+        Amount of directions used. I tried with 8, 16, 24. Decided to stay with 16.
+    grad_corr: int
+        If we want to add some uncertainty in the slopes (adds grad_corr to the gradient) => makes it easier to have positive slopes when the differences are tiny.
+    extra_shift: int
+        Should be 2 if you do the smooth version, otherwise 1.
+    dist_incl : int
+        How many rows of points to take at the grounding line.
+    dist_incl : int
+        Distance, in grid cells, to count within the grounding line
         
     Returns
     -------
