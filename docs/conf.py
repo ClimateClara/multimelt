@@ -33,17 +33,17 @@ release = '0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinxcontrib.bibtex',
 	'sphinx.ext.autodoc',
 	'sphinx.ext.intersphinx',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
-	'sphinxcontrib.bibtex'
 ]
 
 bibtex_bibfiles = ['./literature/references.bib']
 bibtex_encoding = 'latin'
-bibtex_default_style = 'unsrt'
+bibtex_default_style = 'plain'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

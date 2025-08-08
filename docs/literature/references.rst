@@ -4,5 +4,5 @@ References
 .. bibliography:: references.bib
     :all:
     :encoding: latin
-    :style: unsrt
+    :style: plain
     :keyprefix:
