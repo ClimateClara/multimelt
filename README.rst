@@ -57,8 +57,9 @@ The detailed description of the application of the functions in multimelt is fou
 
 Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P. (2022): An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere, https://doi.org/10.5194/tc-16-4931-2022. 
 
+It now also includes DeepMelt, the neural network introduced in the following: 
 
-.. _`Burgard et al., 2022`: https://doi.org/10.5194/tc-16-4931-2022
+Burgard, C., Jourdain, N. C., Mathiot, P., Smith, R. S., Schäfer, R., Caillet, J., et al. (2023): Emulating present and future simulations of melt rates at the base of Antarctic ice shelves with neural networks. Journal of Advances in Modeling Earth Systems, 15, e2023MS003829. https://doi.org/10.1029/2023MS003829
 
 
 
