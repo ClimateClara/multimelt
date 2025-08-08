@@ -1,9 +1,6 @@
 sphinx
+sphinx_rtd_theme
 sphinxcontrib-bibtex
 
 pybtex
 pybtex-docutils
-
-sphinx
-sphinx-rtd-theme
-sphinxcontrib-bibtex
