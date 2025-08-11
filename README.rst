@@ -53,11 +53,11 @@ Don't hesitate to contact me if any questions arise: clara.burgard@locean.ipsl.f
 How to cite multimelt
 ---------------------
 
-The detailed description of the application of the functions in multimelt is found in `Burgard et al., 2022`_ and should therefore, when used, be cited as follows:
+The detailed description of the application of the functions in multimelt is found in Burgard et al., 2022 and should therefore, when used, be cited as follows:
 
 Burgard, C., Jourdain, N. C., Reese, R., Jenkins, A., and Mathiot, P. (2022): An assessment of basal melt parameterisations for Antarctic ice shelves, The Cryosphere, https://doi.org/10.5194/tc-16-4931-2022. 
 
-It now also includes DeepMelt, the neural network introduced in the following: 
+multimelt now also includes DeepMelt, the neural network introduced in the following: 
 
 Burgard, C., Jourdain, N. C., Mathiot, P., Smith, R. S., Schäfer, R., Caillet, J., Finn, T.S., and Johnson, J.E. (2023): Emulating present and future simulations of melt rates at the base of Antarctic ice shelves with neural networks. Journal of Advances in Modeling Earth Systems, 15, e2023MS003829. https://doi.org/10.1029/2023MS003829
 

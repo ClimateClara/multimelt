@@ -38,6 +38,7 @@ setuptools.setup(
     author_email='clara.burgard@locean.ipsl.fr',
     description='Regroupment of the main existing ice shelf basal melt parameterisations',
     long_description=long_description,
+    long_description_content_type="text/x-rst",
     
     #The project's main homepage.
     url='https://github.com/ClimateClara/multimelt',
